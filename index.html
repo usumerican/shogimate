@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head prefix="og: http://ogp.me/ns# website: http://ogp.me/ns/website#">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <meta name="description" content="%VITE_APP_DESCRIPTION%" />
+    <meta name="theme-color" content="#fd0" />
+    <meta property="og:url" content="%VITE_APP_URL%" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="%VITE_APP_URL%icon.png" />
+    <meta property="og:title" content="%VITE_APP_TITLE%" />
+    <meta property="og:description" content="%VITE_APP_DESCRIPTION%" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@usumerican" />
+    <title>%VITE_APP_TITLE%</title>
+    <link rel="canonical" href="%VITE_APP_URL%" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon.png" />
+    <link rel="stylesheet" href="src/shogimate.scss" />
+    <style>
+      html {
+        height: 100%;
+        overflow: hidden;
+        touch-action: manipulation;
+      }
+      body {
+        max-width: 100vh;
+        height: 100%;
+        margin: 0 auto;
+        background: #999;
+      }
+    </style>
+    <script src="lib/sse42/yaneuraou.js" defer></script>
+    <script src="lib/nosimd/yaneuraou.js" defer></script>
+    <script type="module" src="src/shogimate.mjs"></script>
+    <script>
+      addEventListener('DOMContentLoaded', () => shogimate());
+    </script>
+  </head>
+  <body></body>
+</html>

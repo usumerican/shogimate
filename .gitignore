@@ -1,0 +1,13 @@
+.*
+*.log
+firebase*
+dist/
+node_modules/
+tmp/
+
+!.editorconfig
+!.env
+!.eslintrc.json
+!.github/
+!.gitignore
+!.prettierrc.json

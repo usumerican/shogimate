@@ -1,0 +1,280 @@
+.shogimate {
+  $gap: 0.4vh;
+  $rh: 7.5vh;
+  $hh: 4.4vh;
+  $tc: #fd0;
+  $bc: #999;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+
+  * {
+    box-sizing: border-box;
+    color: #000;
+    font: 0.8rem 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    margin: 0;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  button {
+    appearance: none;
+    background: #eee;
+    border: 1px solid $bc;
+    border-radius: $gap;
+    cursor: pointer;
+  }
+
+  button:active {
+    opacity: 0.8;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  output {
+    background: #fff;
+    border: 1px solid $bc;
+    padding: 2px;
+  }
+
+  pre {
+    background: #fff;
+    border: 1px solid $bc;
+    padding: 2px;
+    overflow-y: scroll;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  select {
+    appearance: menulist-button;
+    border: 1px solid $bc;
+    border-radius: $gap;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  textarea {
+    border: 1px solid $bc;
+    padding: 2px;
+    overflow-y: scroll;
+    resize: none;
+  }
+
+  .Center {
+    display: grid;
+    place-items: center;
+  }
+
+  .TitleBar {
+    display: grid;
+    gap: $gap;
+    grid-template-columns: 1fr 2fr 1fr;
+  }
+
+  .ToolBar {
+    display: grid;
+    gap: $gap;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+
+  .ConfirmView {
+    background: #0006;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+
+    .ConfirmContent {
+      background: $tc;
+      width: 80%;
+      padding: $gap;
+      display: grid;
+      gap: $gap;
+      grid-template-rows: $rh $rh;
+
+      .ItemList {
+        display: grid;
+        gap: $gap;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+      }
+    }
+  }
+
+  .MenuView {
+    background: #0006;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+
+    .MenuContent {
+      background: $tc;
+      width: 80%;
+      max-height: 80%;
+      padding: $gap;
+      display: grid;
+      gap: $gap;
+      grid-template-rows: $rh 1fr;
+
+      .ItemList {
+        display: grid;
+        gap: $gap;
+        grid-auto-flow: row;
+        grid-auto-rows: $rh;
+        overflow-y: scroll;
+      }
+    }
+  }
+
+  .HomeView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: 1fr repeat(6, $rh);
+
+    .TitleOutput {
+      font-size: 1.2rem;
+    }
+  }
+
+  .QuestionView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 130vw) minmax($rh, auto) minmax($rh, auto);
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #ffd;
+    }
+
+    .Answering {
+      background: #fff;
+    }
+
+    .TabBar {
+      border: 1px solid $bc;
+      border-radius: $gap;
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+
+      button {
+        background: #eee;
+        border: none;
+        border-radius: 0;
+      }
+
+      .Selected {
+        background: #cff;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .ResultView {
+    background: #0003;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 130vw) minmax($rh, auto) minmax($rh, auto);
+
+    .MessageOutput {
+      grid-row: 1 / 3;
+      background: #fcc;
+      font-size: 1rem;
+    }
+
+    .Success {
+      background: #cfc;
+    }
+
+    .ItemList {
+      grid-row: 4/ 6;
+      background: $tc;
+      padding: $gap;
+      display: grid;
+      gap: $gap;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+    }
+  }
+
+  .CollectionView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh $rh 1fr $rh $rh;
+
+    .LimitList {
+      display: grid;
+      gap: $gap;
+      grid-auto-flow: row;
+      grid-auto-rows: $rh;
+      overflow-y:scroll;
+
+      .LimitItem {
+        background: #fff;
+        padding: $gap;
+        display: grid;
+        gap: $gap;
+        grid-template-columns: 1fr 4rem;
+
+        label {
+          display: flex;
+          gap: $gap;
+          place-items: center left;
+        }
+      }
+    }
+  }
+
+  .ImportView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh 1fr $rh $rh;
+
+    .FileInput {
+      display: none;
+    }
+  }
+
+  .ExportView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh 1fr $rh;
+  }
+}
