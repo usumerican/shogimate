@@ -49,7 +49,7 @@ export default class HomeView {
       this.start(0);
     });
 
-    on(this.el.querySelector('.ChallengeButton'), 'click', async () => {
+    on(this.el.querySelector('.ChallengeButton'), 'click', () => {
       this.start(-1);
     });
 
@@ -82,6 +82,7 @@ export default class HomeView {
         volume,
         this.app.getState(['bs', book.name, 'vs', volume.name])
       );
+      this.updateContinueButton();
     }
   }
 
