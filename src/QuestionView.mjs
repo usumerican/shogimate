@@ -74,10 +74,10 @@ export default class QuestionView {
           this.shogiPanel.request();
           break;
         case 1:
-          await this.app.writeToClipboard(this.startSfen);
+          this.app.writeToClipboard(this.startSfen);
           break;
         case 2:
-          await this.app.writeToClipboard(formatGameUsi(this.game));
+          this.app.writeToClipboard(formatGameUsi(this.game));
           break;
       }
     });
@@ -223,7 +223,7 @@ export default class QuestionView {
     return this.recordOrder < this.recordIndices.length - 1;
   }
 
-  async doRecordNext() {
+  doRecordNext() {
     if (this.canRecordNext()) {
       this.changeRecord(this.recordOrder + 1);
     } else {
@@ -508,7 +508,7 @@ export default class QuestionView {
     this.shogiPanel.request();
   }
 
-  async doAnswer() {
+  doAnswer() {
     if (this.limit) {
       this.stopClock();
       this.answering = true;

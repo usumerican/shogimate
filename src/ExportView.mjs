@@ -22,8 +22,8 @@ export default class ExportView {
       this.hide();
     });
 
-    on(this.el.querySelector('.CopyButton'), 'click', async () => {
-      await this.app.writeToClipboard(this.textOutput.value);
+    on(this.el.querySelector('.CopyButton'), 'click', () => {
+      this.app.writeToClipboard(this.textOutput.value);
     });
 
     on(this.el.querySelector('.SubmitButton'), 'click', () => {
