@@ -12,9 +12,10 @@ export default class HomeView {
         <button class="ContinueButton">続きから</button>
         <button class="StartButton">始めから</button>
         <button class="ChallengeButton">チャレンジ</button>
-        <div class="TitleBar">
+        <button class="CollectionButton">コレクション</button>
+        <div class="ToolBar">
           <button class="InfoButton">ソース</button>
-          <button class="CollectionButton">コレクション</button>
+          <button class="SettingsButton">設定</button>
           <button class="ReloadButton">再読込</button>
         </div>
       </div>
@@ -27,6 +28,10 @@ export default class HomeView {
 
     on(this.el.querySelector('.InfoButton'), 'click', () => {
       openUrl('https://github.com/usumerican/shogimate');
+    });
+
+    on(this.el.querySelector('.SettingsButton'), 'click', async () => {
+      await this.app.settingsView.show();
     });
 
     on(this.el.querySelector('.ReloadButton'), 'click', () => {

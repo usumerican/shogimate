@@ -12,6 +12,8 @@
 
 WebAssembly SIMD の判別には、[WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) を使っています。
 
+効果音には、[効果音ラボ](https://soundeffect-lab.info/)の音源を使っています。
+
 ## 開発
 
 Node.js が必要です。
