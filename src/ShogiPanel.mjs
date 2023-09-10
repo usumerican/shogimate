@@ -47,11 +47,9 @@ export default class ShogiPanel {
       [this.squareL * -4.25, this.squareL * 5.5],
       [this.squareL * 4.25, this.squareL * -5.5],
     ];
-    this.squareFont = ~~(this.squareL * 0.7) + 'px serif';
-    this.kingFont = 'bold ' + ~~(this.squareL * 0.7) + 'px sans-serif';
+    this.squareFont = ~~(this.squareL * 0.6) + 'px serif';
+    this.kingFont = 'bold ' + ~~(this.squareL * 0.6) + 'px sans-serif';
     this.smallFont = ~~(this.squareL * 0.4) + 'px sans-serif';
-    this.sideStyles = ['#00c', '#c00'];
-    this.filterStyles = ['#00c3', '#c003'];
     this.matrix = [1, 0, 0, 1, 0, 0];
     this.lastFrameTime = 0;
     this.inversion = 0;
@@ -157,13 +155,17 @@ export default class ShogiPanel {
       this.renderText(context, name, this.boardX + this.boardW + this.squareL / 4, y, this.inversion);
     }
 
+    if (!this.pieceStyle) {
+      return;
+    }
+
     context.lineWidth = 4;
     context.strokeRect(this.boardX, this.boardY, this.boardW, this.boardH);
     for (let side = 0; side < sideN; side++) {
       context.strokeRect(...this.handRects[side]);
       const [sx, sy] = this.sidePoints[side];
       context.strokeRect(sx, sy, this.squareL, this.squareL);
-      context.fillStyle = this.sideStyles[side];
+      context.fillStyle = this.pieceStyle.textColors[side];
       context.font = this.squareFont;
       this.renderText(context, sideInfos[side].char, sx + this.squareR, sy + this.squareR, side);
       context.font = this.smallFont;
@@ -189,10 +191,10 @@ export default class ShogiPanel {
     }
 
     const nextSide = this.step.position.sideToMove;
-    context.fillStyle = this.filterStyles[nextSide];
+    context.fillStyle = this.pieceStyle.filterColors[nextSide];
     context.fillRect(...this.sidePoints[nextSide], this.squareL, this.squareL);
     if (this.nextMove) {
-      context.fillStyle = this.filterStyles[nextSide];
+      context.fillStyle = this.pieceStyle.filterColors[nextSide];
       const nextMoveFrom = getMoveFrom(this.nextMove);
       if (isMoveDropped(this.nextMove)) {
         context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareL, this.squareL);
@@ -201,7 +203,7 @@ export default class ShogiPanel {
       }
     } else if (this.step.move) {
       const lastSide = nextSide ^ 1;
-      context.fillStyle = this.filterStyles[lastSide];
+      context.fillStyle = this.pieceStyle.filterColors[lastSide];
       context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareL, this.squareL);
       const from = getMoveFrom(this.step.move);
       if (isMoveDropped(this.step.move)) {
@@ -237,7 +239,7 @@ export default class ShogiPanel {
     }
 
     if (this.nextToMap) {
-      context.fillStyle = this.filterStyles[nextSide];
+      context.fillStyle = this.pieceStyle.filterColors[nextSide];
       for (const to of this.nextToMap.keys()) {
         const [x, y] = this.getSquarePoint(to);
         context.beginPath();
@@ -282,7 +284,7 @@ export default class ShogiPanel {
 
       context.font = kind === KING ? this.kingFont : this.squareFont;
       context.textAlign = 'center';
-      context.fillStyle = this.sideStyles[side];
+      context.fillStyle = kind > KING ? this.pieceStyle.promotedColors[side] : this.pieceStyle.textColors[side];
       const ty = this.squareR * 0.1;
       const text = kindInfos[kind].name;
       if (text[1]) {

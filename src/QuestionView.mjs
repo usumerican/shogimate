@@ -66,7 +66,12 @@ export default class QuestionView {
 
     on(this.el.querySelector('.MenuButton'), 'click', async () => {
       switch (
-        await this.app.menuView.show('メニュー', ['盤面反転', '開始局面のコピー (SFEN)', '解答例のコピー (USI)'])
+        await this.app.menuView.show('メニュー', [
+          '盤面反転',
+          '開始局面のコピー (SFEN)',
+          '解答例のコピー (USI)',
+          '設定',
+        ])
       ) {
         case 0:
           this.inversion ^= 1;
@@ -78,6 +83,12 @@ export default class QuestionView {
           break;
         case 2:
           this.app.writeToClipboard(formatGameUsi(this.game));
+          break;
+        case 3:
+          if (await this.app.settingsView.show()) {
+            this.updateSettings();
+            this.shogiPanel.request();
+          }
           break;
       }
     });
@@ -189,11 +200,17 @@ export default class QuestionView {
     }
     this.recordSelect.replaceChildren(...options);
     this.inversion = 0;
+    this.updateSettings();
     this.updateRecord();
     this.app.pushView(this);
     return new Promise((resolve) => {
       this.resolve = resolve;
     });
+  }
+
+  updateSettings() {
+    this.shogiPanel.pieceStyle = this.app.getPieceStyle();
+    this.app.playPieceSound(0);
   }
 
   formatRecordOption(recordIndex, marked) {
@@ -364,6 +381,7 @@ export default class QuestionView {
   }
 
   async doPlayStep(step) {
+    this.app.playPieceSound();
     this.appendPlayStep(step);
     this.changePlayStep(this.playSteps.length - 1);
     if (this.playSide === this.startSide) {

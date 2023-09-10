@@ -142,7 +142,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: 1fr repeat(6, $rh);
+    grid-template-rows: 1fr repeat(7, $rh);
 
     .TitleOutput {
       font-size: 1.2rem;
@@ -276,5 +276,31 @@
     display: grid;
     gap: $gap;
     grid-template-rows: $hh 1fr $rh;
+  }
+
+  .SettingsView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh 1fr $rh;
+
+    .FieldList {
+      background: #ffd;
+      padding: $gap;
+      display: grid;
+      gap: $gap;
+      grid-auto-flow: row;
+      grid-auto-rows: $rh;
+
+      .FieldItem {
+        display: grid;
+        gap: $gap;
+        grid-template-columns: 1fr 2fr;
+      }
+    }
   }
 }
