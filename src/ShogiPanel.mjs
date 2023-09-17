@@ -29,27 +29,49 @@ export default class ShogiPanel {
   constructor(el, handler) {
     this.el = el;
     this.handler = handler;
-    this.squareL = 100;
-    this.squareR = this.squareL / 2;
-    this.stageW = this.squareL * 10;
-    this.stageH = this.squareL * 13;
-    this.boardW = this.boardH = this.squareL * 9;
-    this.boardX = this.boardY = this.squareL * -4.5;
+    this.squareW = 100;
+    this.squareH = 105;
+    this.stageW = this.squareW * 10;
+    this.stageH = this.squareH * 13;
+    this.boardW = this.squareW * 9;
+    this.boardH = this.squareH * 9;
+    this.boardX = this.squareW * -4.5;
+    this.boardY = this.squareH * -4.5;
     this.handRects = [
-      [this.squareL * -3.5, this.squareL * 5, this.squareL * 7, this.squareL],
-      [this.squareL * -3.5, this.squareL * -6, this.squareL * 7, this.squareL],
+      [this.squareW * -3.5, this.squareH * 5, this.squareW * 7, this.squareH],
+      [this.squareW * -3.5, this.squareH * -6, this.squareW * 7, this.squareH],
     ];
     this.sidePoints = [
-      [this.squareL * 3.5, this.squareL * 5],
-      [this.squareL * -4.5, this.squareL * -6],
+      [this.squareW * 3.5, this.squareH * 5],
+      [this.squareW * -4.5, this.squareH * -6],
     ];
     this.clockPoints = [
-      [this.squareL * -4.25, this.squareL * 5.5],
-      [this.squareL * 4.25, this.squareL * -5.5],
+      [this.squareW * -4.25, this.squareH * 5.5],
+      [this.squareW * 4.25, this.squareH * -5.5],
     ];
-    this.squareFont = ~~(this.squareL * 0.6) + 'px serif';
-    this.kingFont = 'bold ' + ~~(this.squareL * 0.6) + 'px sans-serif';
-    this.smallFont = ~~(this.squareL * 0.4) + 'px sans-serif';
+    const tana = Math.tan((81 / 180) * Math.PI);
+    const tanc = Math.tan((72 / 180) * Math.PI);
+    this.baseShapes = [
+      [0.9, 0.9],
+      [0.83, 0.83],
+      [0.84, 0.84],
+      [0.85, 0.85],
+      [0.86, 0.86],
+      [0.88, 0.88],
+      [0.89, 0.89],
+      [0.87, 0.87],
+    ].map(([w, h], base) => {
+      const ax = (w / 2) * this.squareW;
+      const ay = (h / 2) * this.squareH;
+      const by = (ay * (1 + tana * tanc) - ax * tana) / (1 - tana * tanc);
+      const bx = (ay + by) * tanc;
+      const fontSize = ~~(ax * 1.3);
+      return { ax, ay, bx, by, font: base ? `${fontSize}px serif` : `bold ${fontSize}px sans-serif` };
+    });
+    this.shapeTy = this.squareH * 0.05;
+    this.sideFont = ~~(this.squareW * 0.8) + 'px serif';
+    this.countFont = ~~(this.squareW * 0.4) + 'px sans-serif';
+    this.addrFont = ~~(this.squareW * 0.3) + 'px sans-serif';
     this.matrix = [1, 0, 0, 1, 0, 0];
     this.lastFrameTime = 0;
     this.inversion = 0;
@@ -83,13 +105,13 @@ export default class ShogiPanel {
     const y = (i * ((pointer.clientY - canvasRect.top) * devicePixelRatio - this.matrix[5])) / this.matrix[3];
     if (this.rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
       this.handler.onSquare(
-        makeSquare(Math.floor((x - this.boardX) / this.squareL), Math.floor((y - this.boardY) / this.squareL))
+        makeSquare(Math.floor((x - this.boardX) / this.squareW), Math.floor((y - this.boardY) / this.squareH))
       );
     } else {
       for (let side = 0; side < sideN; side++) {
         const [hx, hy, hw, hh] = this.handRects[side];
         if (this.rectContains(hx, hy, hw, hh, x, y)) {
-          this.handler.onHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareL)]);
+          this.handler.onHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)]);
         }
       }
     }
@@ -127,32 +149,31 @@ export default class ShogiPanel {
   render(context) {
     context.beginPath();
     for (let col = 1; col < colN; col++) {
-      const x = this.boardX + this.squareL * col;
+      const x = this.boardX + this.squareW * col;
       context.moveTo(x, this.boardY);
       context.lineTo(x, this.boardY + this.boardH);
     }
     for (let row = 1; row < rowN; row++) {
-      const y = this.boardY + this.squareL * row;
+      const y = this.boardY + this.squareH * row;
       context.moveTo(this.boardX, y);
       context.lineTo(this.boardX + this.boardW, y);
     }
     context.stroke();
 
-    context.font = this.smallFont;
+    context.font = this.addrFont;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-
     for (let col = 0; col < colN; col++) {
       const name = colInfos[col].name;
-      const x = this.boardX + this.squareL * (0.5 + col);
-      this.renderText(context, name, x, this.boardY - this.squareL / 4, this.inversion);
-      this.renderText(context, name, x, this.boardY + this.boardH + this.squareL / 4, this.inversion);
+      const x = this.boardX + this.squareW * (0.5 + col);
+      this.renderText(context, name, x, this.boardY - this.squareH * 0.2, this.inversion);
+      this.renderText(context, name, x, this.boardY + this.boardH + this.squareH * 0.2, this.inversion);
     }
     for (let row = 0; row < rowN; row++) {
       const name = rowInfos[row].name;
-      const y = this.boardY + this.squareL * (0.5 + row);
-      this.renderText(context, name, this.boardX - this.squareL / 4, y, this.inversion);
-      this.renderText(context, name, this.boardX + this.boardW + this.squareL / 4, y, this.inversion);
+      const y = this.boardY + this.squareH * (0.5 + row);
+      this.renderText(context, name, this.boardX - this.squareW * 0.2, y, this.inversion);
+      this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.inversion);
     }
 
     if (!this.pieceStyle) {
@@ -164,16 +185,16 @@ export default class ShogiPanel {
     for (let side = 0; side < sideN; side++) {
       context.strokeRect(...this.handRects[side]);
       const [sx, sy] = this.sidePoints[side];
-      context.strokeRect(sx, sy, this.squareL, this.squareL);
+      context.strokeRect(sx, sy, this.squareW, this.squareH);
       context.fillStyle = this.pieceStyle.textColors[side];
-      context.font = this.squareFont;
-      this.renderText(context, sideInfos[side].char, sx + this.squareR, sy + this.squareR, side);
-      context.font = this.smallFont;
+      context.font = this.sideFont;
+      this.renderText(context, sideInfos[side].char, sx + this.squareW / 2, sy + this.squareH / 2, side);
+      context.font = this.countFont;
       this.renderText(
         context,
         this.sideNames[side],
-        sx + this.squareR,
-        sy + this.squareL * (side ? -0.25 : 1.25),
+        sx + this.squareW / 2,
+        sy + this.squareH * (side ? -0.25 : 1.25),
         this.inversion
       );
       this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.inversion);
@@ -182,7 +203,7 @@ export default class ShogiPanel {
     context.fillStyle = '#000';
     for (const sq of [30, 33, 57, 60]) {
       context.beginPath();
-      context.arc(...this.getSquarePoint(sq), this.squareR * 0.1, 0, Math.PI * 2);
+      context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
       context.fill();
     }
 
@@ -192,30 +213,30 @@ export default class ShogiPanel {
 
     const nextSide = this.step.position.sideToMove;
     context.fillStyle = this.pieceStyle.filterColors[nextSide];
-    context.fillRect(...this.sidePoints[nextSide], this.squareL, this.squareL);
+    context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
     if (this.nextMove) {
       context.fillStyle = this.pieceStyle.filterColors[nextSide];
       const nextMoveFrom = getMoveFrom(this.nextMove);
       if (isMoveDropped(this.nextMove)) {
-        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareL, this.squareL);
+        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
       } else {
-        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareL, this.squareL);
+        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
       }
     } else if (this.step.move) {
       const lastSide = nextSide ^ 1;
       context.fillStyle = this.pieceStyle.filterColors[lastSide];
-      context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareL, this.squareL);
+      context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareW, this.squareH);
       const from = getMoveFrom(this.step.move);
       if (isMoveDropped(this.step.move)) {
-        context.fillRect(...this.getHandPoint(lastSide, from), this.squareL, this.squareL);
+        context.fillRect(...this.getHandPoint(lastSide, from), this.squareW, this.squareH);
       } else {
-        context.fillRect(...this.getSquarePoint(from), this.squareL, this.squareL);
+        context.fillRect(...this.getSquarePoint(from), this.squareW, this.squareH);
       }
       if (this.step.capturedPiece) {
         context.fillRect(
           ...this.getHandPoint(lastSide, getPieceBase(this.step.capturedPiece)),
-          this.squareL,
-          this.squareL
+          this.squareW,
+          this.squareH
         );
       }
     }
@@ -243,38 +264,35 @@ export default class ShogiPanel {
       for (const to of this.nextToMap.keys()) {
         const [x, y] = this.getSquarePoint(to);
         context.beginPath();
-        context.arc(x + this.squareR, y + this.squareR, this.squareR * 0.8, 0, Math.PI * 2);
+        context.arc(x + this.squareW / 2, y + this.squareH / 2, this.squareW * 0.4, 0, Math.PI * 2);
         context.fill();
       }
     }
   }
 
   getSquarePoint(sq) {
-    return [this.boardX + this.squareL * getCol(sq), this.boardY + this.squareL * getRow(sq)];
+    return [this.boardX + this.squareW * getCol(sq), this.boardY + this.squareH * getRow(sq)];
   }
 
   getHandPoint(side, base) {
     const rect = this.handRects[side];
     const order = handOrderMap.get(base);
-    return [rect[0] + this.squareL * (side ? handBaseN - 1 - order : order), rect[1]];
+    return [rect[0] + this.squareW * (side ? handBaseN - 1 - order : order), rect[1]];
   }
 
   renderPiece(context, side, kind, x, y, count) {
     context.save();
     try {
       const cos = side ? -1 : 1;
-      context.transform(cos, 0, 0, cos, x + this.squareR, y + this.squareR);
+      context.transform(cos, 0, 0, cos, x + this.squareW / 2, y + this.squareH / 2);
 
+      const { ax, ay, bx, by, font } = this.baseShapes[getPieceBase(kind)];
       context.beginPath();
-      context.moveTo(0, -this.squareR * 0.9);
-      for (const [x, y] of [
-        [this.squareR * 0.7, -this.squareR * 0.6],
-        [this.squareR * 0.9, this.squareR * 0.9],
-        [-this.squareR * 0.9, this.squareR * 0.9],
-        [-this.squareR * 0.7, -this.squareR * 0.6],
-      ]) {
-        context.lineTo(x, y);
-      }
+      context.moveTo(0, -ay);
+      context.lineTo(bx, by);
+      context.lineTo(ax, ay);
+      context.lineTo(-ax, ay);
+      context.lineTo(-bx, by);
       context.closePath();
       context.fillStyle = '#fe9';
       context.fill();
@@ -282,25 +300,24 @@ export default class ShogiPanel {
       context.strokeStyle = '#666';
       context.stroke();
 
-      context.font = kind === KING ? this.kingFont : this.squareFont;
+      context.font = font;
       context.textAlign = 'center';
       context.fillStyle = kind > KING ? this.pieceStyle.promotedColors[side] : this.pieceStyle.textColors[side];
-      const ty = this.squareR * 0.1;
       const text = kindInfos[kind].name;
       if (text[1]) {
         context.scale(1, 0.5);
         context.textBaseline = 'bottom';
-        context.fillText(text[0], 0, ty);
+        context.fillText(text[0], 0, this.shapeTy);
         context.textBaseline = 'top';
-        context.fillText(text[1], 0, ty);
+        context.fillText(text[1], 0, this.shapeTy);
       } else {
         context.textBaseline = 'middle';
-        context.fillText(text, 0, ty);
+        context.fillText(text, 0, this.shapeTy);
       }
       if (count > 1) {
-        context.font = this.smallFont;
+        context.font = this.countFont;
         context.textBaseline = 'middle';
-        this.renderText(context, count, 0, this.squareL * 0.75, this.inversion ^ side);
+        this.renderText(context, count, 0, this.squareH * 0.75, this.inversion ^ side);
       }
     } finally {
       context.restore();

@@ -157,7 +157,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 130vw) minmax($rh, auto) minmax($rh, auto);
+    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 135vw) minmax($rh, auto) minmax($rh, auto);
     place-items: stretch;
 
     .ShogiPanel {
