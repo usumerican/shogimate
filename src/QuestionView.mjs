@@ -53,6 +53,7 @@ export default class QuestionView {
     this.recordSelect = this.el.querySelector('.RecordSelect');
     this.recordPrevButton = this.el.querySelector('.RecordPrevButton');
     this.recordNextButton = this.el.querySelector('.RecordNextButton');
+    this.collectButton = this.el.querySelector('.CollectButton');
     this.playButton = this.el.querySelector('.PlayButton');
     this.answerButton = this.el.querySelector('.AnswerButton');
     this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
@@ -93,7 +94,7 @@ export default class QuestionView {
       }
     });
 
-    on(this.el.querySelector('.CollectButton'), 'click', () => {
+    on(this.collectButton, 'click', () => {
       const recordIndex = this.recordIndices[this.recordOrder];
       const record = this.records[recordIndex];
       const marked = this.app.collection.has(record);
@@ -261,7 +262,9 @@ export default class QuestionView {
   updateRecord() {
     this.titleOutput.textContent = `${this.title} (${this.recordOrder + 1}/${this.records.length})`;
     this.recordSelect.value = this.recordOrder;
-    this.game = parseGameUsi(this.records[this.recordIndices[this.recordOrder]]);
+    const [gameUsi, rate] = this.records[this.recordIndices[this.recordOrder]].split('\t');
+    this.game = parseGameUsi(gameUsi);
+    this.rate = rate;
     this.startStep = new Step(this.game.startStep);
     this.startSfen = formatSfen(this.startStep.position);
     this.startSide = this.startStep.position.sideToMove;
@@ -270,6 +273,8 @@ export default class QuestionView {
     this.playOptions = [];
     this.playIndex = -1;
     this.appendPlayStep(this.startStep);
+    this.playButton.disabled = this.rate;
+    this.collectButton.disabled = this.rate;
     this.answerSteps = [];
     for (let step = this.startStep; step; step = step.children[0]) {
       this.answerSteps.push(step);
@@ -287,8 +292,12 @@ export default class QuestionView {
     this.shogiPanel.sideNames[this.startSide ^ 1] = '受方';
     this.shogiPanel.clocks[this.startSide] = '';
     this.shogiPanel.clocks[this.startSide ^ 1] = '';
-    this.doPlay();
-    this.startClock();
+    if (this.rate) {
+      this.doAnswer();
+    } else {
+      this.doPlay();
+      this.startClock();
+    }
   }
 
   startClock() {

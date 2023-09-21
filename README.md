@@ -14,6 +14,8 @@ WebAssembly SIMD の判別には、[WebAssembly Feature Detection](https://githu
 
 効果音には、[効果音ラボ](https://soundeffect-lab.info/)の音源を使っています。
 
+次の一手の設問は、[次の１手問題自動作成プログラムのデータ](https://github.com/tayayan/cshogi_util)を使いました。
+
 ## 開発
 
 Node.js が必要です。

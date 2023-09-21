@@ -71,6 +71,7 @@ export default class App {
       { name: 'extra5', title: '別冊・実戦詰5手', volumeCount: 2 },
       { name: 'extra7', title: '別冊・実戦詰7手', volumeCount: 3 },
       { name: 'extra9', title: '別冊・実戦詰9手', volumeCount: 3 },
+      { name: 'nextmove', title: '次の一手(参考)', volumeCount: 5 },
     ].reduce((bookMap, book) => {
       book.volumeMap = [...Array(book.volumeCount).keys()].reduce((volumeMap, i) => {
         const volume = {
