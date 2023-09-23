@@ -32,18 +32,23 @@ export default class App {
     this.limitSet = new Set(this.loadItem('limits') || []);
     this.pieceStyles = [
       {
-        name: 'blue-red',
-        title: '青対赤',
-        textColors: ['#00c', '#c00'],
-        promotedColors: ['#00f', '#f00'],
-        filterColors: ['#00c3', '#c003'],
+        name: 'black-red',
+        title: '標準',
       },
       {
-        name: 'black-red',
-        title: '黒裏赤',
-        textColors: ['#000', '#000'],
-        promotedColors: ['#f00', '#f00'],
-        filterColors: ['#0003', '#0003'],
+        name: 'black-white',
+        title: '黒対白',
+        bodyColors: ['#000', '#fff'],
+        textColors: ['#fff', '#000'],
+        promotedColors: ['#0ff', '#f00'],
+      },
+      {
+        name: 'blue-red',
+        title: '青対赤',
+        bodyColors: ['#eef', '#fee'],
+        textColors: ['#00c', '#c00'],
+        promotedColors: ['#00f', '#f00'],
+        filterColors: ['#99f6', '#f996'],
       },
     ];
     this.pieceSounds = [
@@ -58,6 +63,14 @@ export default class App {
       {
         name: 'slap',
         title: '平手打ち',
+      },
+      {
+        name: 'click',
+        title: 'クリック',
+      },
+      {
+        name: 'chick-cheep',
+        title: 'ヒヨコの鳴き声',
       },
     ];
     this.bookMap = [
