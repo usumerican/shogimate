@@ -147,6 +147,41 @@ export default class ShogiPanel {
   }
 
   render(context) {
+    if (!this.step) {
+      return;
+    }
+
+    const nextSide = this.step.position.sideToMove;
+    const filterColors = this.pieceStyle?.filterColors || ['#6666', '#6666'];
+    context.fillStyle = filterColors[nextSide];
+    context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
+    if (this.nextMove) {
+      context.fillStyle = filterColors[nextSide];
+      const nextMoveFrom = getMoveFrom(this.nextMove);
+      if (isMoveDropped(this.nextMove)) {
+        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
+      } else {
+        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
+      }
+    } else if (this.step.move) {
+      const lastSide = nextSide ^ 1;
+      context.fillStyle = filterColors[lastSide];
+      context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareW, this.squareH);
+      const from = getMoveFrom(this.step.move);
+      if (isMoveDropped(this.step.move)) {
+        context.fillRect(...this.getHandPoint(lastSide, from), this.squareW, this.squareH);
+      } else {
+        context.fillRect(...this.getSquarePoint(from), this.squareW, this.squareH);
+      }
+      if (this.step.capturedPiece) {
+        context.fillRect(
+          ...this.getHandPoint(lastSide, getPieceBase(this.step.capturedPiece)),
+          this.squareW,
+          this.squareH
+        );
+      }
+    }
+
     context.beginPath();
     for (let col = 1; col < colN; col++) {
       const x = this.boardX + this.squareW * col;
@@ -160,6 +195,7 @@ export default class ShogiPanel {
     }
     context.stroke();
 
+    context.fillStyle = '#000';
     context.font = this.addrFont;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -176,17 +212,12 @@ export default class ShogiPanel {
       this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.inversion);
     }
 
-    if (!this.pieceStyle) {
-      return;
-    }
-
     context.lineWidth = 4;
     context.strokeRect(this.boardX, this.boardY, this.boardW, this.boardH);
     for (let side = 0; side < sideN; side++) {
       context.strokeRect(...this.handRects[side]);
       const [sx, sy] = this.sidePoints[side];
       context.strokeRect(sx, sy, this.squareW, this.squareH);
-      context.fillStyle = this.pieceStyle.textColors[side];
       context.font = this.sideFont;
       this.renderText(context, sideInfos[side].char, sx + this.squareW / 2, sy + this.squareH / 2, side);
       context.font = this.countFont;
@@ -200,45 +231,10 @@ export default class ShogiPanel {
       this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.inversion);
     }
 
-    context.fillStyle = '#000';
     for (const sq of [30, 33, 57, 60]) {
       context.beginPath();
       context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
       context.fill();
-    }
-
-    if (!this.step) {
-      return;
-    }
-
-    const nextSide = this.step.position.sideToMove;
-    context.fillStyle = this.pieceStyle.filterColors[nextSide];
-    context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
-    if (this.nextMove) {
-      context.fillStyle = this.pieceStyle.filterColors[nextSide];
-      const nextMoveFrom = getMoveFrom(this.nextMove);
-      if (isMoveDropped(this.nextMove)) {
-        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
-      } else {
-        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
-      }
-    } else if (this.step.move) {
-      const lastSide = nextSide ^ 1;
-      context.fillStyle = this.pieceStyle.filterColors[lastSide];
-      context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareW, this.squareH);
-      const from = getMoveFrom(this.step.move);
-      if (isMoveDropped(this.step.move)) {
-        context.fillRect(...this.getHandPoint(lastSide, from), this.squareW, this.squareH);
-      } else {
-        context.fillRect(...this.getSquarePoint(from), this.squareW, this.squareH);
-      }
-      if (this.step.capturedPiece) {
-        context.fillRect(
-          ...this.getHandPoint(lastSide, getPieceBase(this.step.capturedPiece)),
-          this.squareW,
-          this.squareH
-        );
-      }
     }
 
     for (let sq = 0; sq < squareN; sq++) {
@@ -260,11 +256,11 @@ export default class ShogiPanel {
     }
 
     if (this.nextToMap) {
-      context.fillStyle = this.pieceStyle.filterColors[nextSide];
+      context.fillStyle = filterColors[nextSide];
       for (const to of this.nextToMap.keys()) {
         const [x, y] = this.getSquarePoint(to);
         context.beginPath();
-        context.arc(x + this.squareW / 2, y + this.squareH / 2, this.squareW * 0.4, 0, Math.PI * 2);
+        context.arc(x + this.squareW / 2, y + this.squareH / 2, this.squareW * 0.45, 0, Math.PI * 2);
         context.fill();
       }
     }
@@ -286,6 +282,12 @@ export default class ShogiPanel {
       const cos = side ? -1 : 1;
       context.transform(cos, 0, 0, cos, x + this.squareW / 2, y + this.squareH / 2);
 
+      if (count > 1) {
+        context.font = this.countFont;
+        context.fillStyle = '#000';
+        this.renderText(context, count, 0, this.squareH * 0.75, this.inversion ^ side);
+      }
+
       const { ax, ay, bx, by, font } = this.baseShapes[getPieceBase(kind)];
       context.beginPath();
       context.moveTo(0, -ay);
@@ -294,7 +296,7 @@ export default class ShogiPanel {
       context.lineTo(-ax, ay);
       context.lineTo(-bx, by);
       context.closePath();
-      context.fillStyle = '#fe9';
+      context.fillStyle = this.pieceStyle?.bodyColors?.[side] || '#fe9';
       context.fill();
       context.lineWidth = 2;
       context.strokeStyle = '#666';
@@ -302,22 +304,18 @@ export default class ShogiPanel {
 
       context.font = font;
       context.textAlign = 'center';
-      context.fillStyle = kind > KING ? this.pieceStyle.promotedColors[side] : this.pieceStyle.textColors[side];
-      const text = kindInfos[kind].name;
-      if (text[1]) {
-        context.scale(1, 0.5);
+      context.fillStyle =
+        kind > KING ? this.pieceStyle?.promotedColors?.[side] || '#f00' : this.pieceStyle?.textColors?.[side] || '#000';
+      const [ch0, ch1] = [...kindInfos[kind].name];
+      if (ch1) {
+        context.scale(0.8, 0.6);
         context.textBaseline = 'bottom';
-        context.fillText(text[0], 0, this.shapeTy);
+        context.fillText(ch0, 0, this.shapeTy);
         context.textBaseline = 'top';
-        context.fillText(text[1], 0, this.shapeTy);
+        context.fillText(ch1, 0, this.shapeTy);
       } else {
         context.textBaseline = 'middle';
-        context.fillText(text, 0, this.shapeTy);
-      }
-      if (count > 1) {
-        context.font = this.countFont;
-        context.textBaseline = 'middle';
-        this.renderText(context, count, 0, this.squareH * 0.75, this.inversion ^ side);
+        context.fillText(ch0, 0, this.shapeTy);
       }
     } finally {
       context.restore();
