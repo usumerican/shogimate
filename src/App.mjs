@@ -9,6 +9,7 @@ import MenuView from './MenuView.mjs';
 import QuestionView from './QuestionView.mjs';
 import ResultView from './ResultView.mjs';
 import SettingsView from './SettingsView.mjs';
+import { KING, makePiece } from './shogi.mjs';
 
 export default class App {
   static NAME = 'shogimate';
@@ -30,27 +31,6 @@ export default class App {
     this.settings = this.loadItem('settings') || {};
     this.collection = new Set(this.loadItem('collection') || []);
     this.limitSet = new Set(this.loadItem('limits') || []);
-    this.pieceStyles = [
-      {
-        name: 'black-red',
-        title: '標準',
-      },
-      {
-        name: 'black-white',
-        title: '黒対白',
-        bodyColors: ['#000', '#fff'],
-        textColors: ['#fff', '#000'],
-        promotedColors: ['#0ff', '#f00'],
-      },
-      {
-        name: 'blue-red',
-        title: '青対赤',
-        bodyColors: ['#eef', '#fee'],
-        textColors: ['#00c', '#c00'],
-        promotedColors: ['#00f', '#f00'],
-        filterColors: ['#99f6', '#f996'],
-      },
-    ];
     this.pieceSounds = [
       {
         name: '',
@@ -71,6 +51,74 @@ export default class App {
       {
         name: 'chick-cheep',
         title: 'ヒヨコの鳴き声',
+      },
+    ];
+    this.pieceStyles = [
+      {
+        name: 'black-red',
+        title: '標準',
+      },
+      {
+        name: 'black-white',
+        title: '黒対白',
+        bodyColors: ['#000', '#fff'],
+        textColors: ['#fff', '#000'],
+        promotedColors: ['#0ff', '#f00'],
+      },
+      {
+        name: 'blue-red',
+        title: '青対赤',
+        bodyColors: ['#ddf', '#fdd'],
+        textColors: ['#00c', '#c00'],
+        promotedColors: ['#60f', '#f06'],
+        filterColors: ['#99f6', '#f996'],
+      },
+    ];
+    this.pieceTitleSets = [
+      {
+        name: 'name',
+        title: '標準',
+      },
+      {
+        name: 'char',
+        title: '一文字',
+        titles: ['', '歩', '香', '桂', '銀', '角', '飛', '金', '玉', 'と', '杏', '圭', '全', '馬', '竜'],
+      },
+      {
+        name: 'title',
+        title: '二文字',
+        titles: [
+          '',
+          '歩兵',
+          '香車',
+          '桂馬',
+          '銀将',
+          '角行',
+          '飛車',
+          '金将',
+          '王将',
+          'と金',
+          '成香',
+          '成桂',
+          '成銀',
+          '龍馬',
+          '竜王',
+          '',
+        ].reduce((titles, title, kind) => {
+          titles[kind] = title;
+          titles[makePiece(kind, 1)] = kind === KING ? '玉将' : title;
+          return titles;
+        }, []),
+      },
+      {
+        name: 'en',
+        title: '英字',
+        titles: ['', 'P', 'L', 'N', 'S', 'B', 'R', 'G', 'K', 'Ⓟ', 'Ⓛ', 'Ⓝ', 'Ⓢ', 'H', 'D'],
+      },
+      {
+        name: 'animal',
+        title: '動物絵文字',
+        titles: ['', '🐥', '🐭', '🐰', '🐵', '🐯', '🐻', '🐶', '🦁', '🐔', '🐁', '🐇', '🐒', '🦄', '🐲'],
       },
     ];
     this.bookMap = [
@@ -237,5 +285,12 @@ export default class App {
 
   getPieceStyle() {
     return this.pieceStyles.find((style) => style.name === this.settings.pieceStyleName) || this.pieceStyles[0];
+  }
+
+  getPieceTitleSet() {
+    return (
+      this.pieceTitleSets.find((titleSet) => titleSet.name === this.settings.pieceTitleSetName) ||
+      this.pieceTitleSets[0]
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { formatGameUsi, parseGameUsi } from '../src/shogi.mjs';
+import { formatGameUsi, formatStep, parseGameUsi, parseMoveUsi } from '../src/shogi.mjs';
 
 describe('shogi', () => {
   test('gameUsi', () => {
@@ -20,5 +20,18 @@ describe('shogi', () => {
     expect(formatGameUsi(parseGameUsi(prefix + startpos))).toEqual(prefix + startpos);
     expect(formatGameUsi(parseGameUsi(startpos + suffix))).toEqual(prefix + startpos + suffix);
     expect(formatGameUsi(parseGameUsi(startpos))).toEqual(prefix + startpos);
+  });
+
+  test('formatStep', () => {
+    let step = parseGameUsi('startpos').startStep;
+    expect(formatStep(step)).toEqual('開始局面');
+    step = step.appendMove(parseMoveUsi('7g7f'));
+    expect(formatStep(step)).toEqual('☗７六歩(77)');
+    step = step.appendMove(parseMoveUsi('3c3d'));
+    step = step.appendMove(parseMoveUsi('8h2b+'));
+    expect(formatStep(step)).toEqual('☗２二角成(88)');
+    step = step.appendMove(parseMoveUsi('3a2b'));
+    step = step.appendMove(parseMoveUsi('B*4e'));
+    expect(formatStep(step)).toEqual('☗４五角打');
   });
 });

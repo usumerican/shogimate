@@ -2,7 +2,6 @@
 
 import { on } from './browser.mjs';
 import {
-  KING,
   colInfos,
   colN,
   getCol,
@@ -15,8 +14,10 @@ import {
   handBaseN,
   handBases,
   handOrderMap,
+  isKindPromoted,
   isMoveDropped,
-  kindInfos,
+  kindNames,
+  makePiece,
   makeSquare,
   rowInfos,
   rowN,
@@ -304,9 +305,11 @@ export default class ShogiPanel {
 
       context.font = font;
       context.textAlign = 'center';
-      context.fillStyle =
-        kind > KING ? this.pieceStyle?.promotedColors?.[side] || '#f00' : this.pieceStyle?.textColors?.[side] || '#000';
-      const [ch0, ch1] = [...kindInfos[kind].name];
+      context.fillStyle = isKindPromoted(kind)
+        ? this.pieceStyle?.promotedColors?.[side] || '#f00'
+        : this.pieceStyle?.textColors?.[side] || '#000';
+      const titles = this.pieceTitleSet?.titles || kindNames;
+      const [ch0, ch1] = [...titles[titles.length > kindNames.length ? makePiece(kind, side) : kind]];
       if (ch1) {
         context.scale(0.8, 0.6);
         context.textBaseline = 'bottom';

@@ -211,6 +211,7 @@ export default class QuestionView {
 
   updateSettings() {
     this.shogiPanel.pieceStyle = this.app.getPieceStyle();
+    this.shogiPanel.pieceTitleSet = this.app.getPieceTitleSet();
     this.app.playPieceSound(0);
   }
 
