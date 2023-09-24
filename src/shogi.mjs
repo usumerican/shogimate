@@ -63,6 +63,10 @@ export const ROOK = 6;
 export const GOLD = 7;
 export const KING = 8;
 
+export function isKindPromoted(kind) {
+  return kind > KING;
+}
+
 export const pieceBaseMask = 7;
 export const piecePromotedMask = 8;
 export const pieceKindMask = 15;
@@ -105,6 +109,7 @@ export const kindInfos = [
   { name: '馬', usi: '+B' },
   { name: '竜', usi: '+R' },
 ];
+export const kindNames = kindInfos.map((info) => info?.name || '');
 export const pieceInfos = kindInfos.reduce((arr, info, kind) => {
   if (info) {
     arr[kind] = info;
@@ -284,12 +289,12 @@ export function formatStep(step) {
   const prefix = sideInfos[step.position.sideToMove ^ 1].char + colInfos[getCol(to)].name + rowInfos[getRow(to)].name;
   const from = getMoveFrom(step.move);
   if (isMoveDropped(step.move)) {
-    return prefix + kindInfos[from].name + '打';
+    return prefix + kindNames[from] + '打';
   }
   const piece = step.position.getPiece(to);
   return (
     prefix +
-    (isMovePromoted(step.move) ? kindInfos[getPieceBase(piece)].name + '成' : kindInfos[getPieceKind(piece)].name) +
+    (isMovePromoted(step.move) ? kindNames[getPieceBase(piece)] + '成' : kindNames[getPieceKind(piece)]) +
     `(${colInfos[getCol(from)].char}${rowInfos[getRow(from)].char})`
   );
 }

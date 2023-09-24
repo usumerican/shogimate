@@ -14,8 +14,12 @@ export default class SettingsView {
             <select class="PieceSoundSelect"></select>
           </div>
           <div class="FieldItem">
-            <span class="Center">駒表示</span>
+            <span class="Center">駒配色</span>
             <select class="PieceStyleSelect"></select>
+          </div>
+          <div class="FieldItem">
+            <span class="Center">駒文字</span>
+            <select class="PieceTitleSetSelect"></select>
           </div>
         </div>
         <div class="ToolBar">
@@ -28,6 +32,10 @@ export default class SettingsView {
     this.pieceSoundSelect.replaceChildren(...this.app.pieceSounds.map((sound) => new Option(sound.title, sound.name)));
     this.pieceStyleSelect = this.el.querySelector('.PieceStyleSelect');
     this.pieceStyleSelect.replaceChildren(...this.app.pieceStyles.map((style) => new Option(style.title, style.name)));
+    this.pieceTitleSetSelect = this.el.querySelector('.PieceTitleSetSelect');
+    this.pieceTitleSetSelect.replaceChildren(
+      ...this.app.pieceTitleSets.map((titleSet) => new Option(titleSet.title, titleSet.name))
+    );
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
@@ -40,6 +48,7 @@ export default class SettingsView {
     on(this.el.querySelector('.SubmitButton'), 'click', () => {
       this.app.settings.pieceSoundName = this.pieceSoundSelect.value;
       this.app.settings.pieceStyleName = this.pieceStyleSelect.value;
+      this.app.settings.pieceTitleSetName = this.pieceTitleSetSelect.value;
       this.app.saveSettings();
       this.hide(true);
     });
@@ -48,6 +57,7 @@ export default class SettingsView {
   show() {
     setSelectValue(this.pieceSoundSelect, this.app.settings.pieceSoundName);
     setSelectValue(this.pieceStyleSelect, this.app.settings.pieceStyleName);
+    setSelectValue(this.pieceTitleSetSelect, this.app.settings.pieceTitleSetName);
     this.app.pushView(this);
     return new Promise((resolve) => {
       this.resolve = resolve;
