@@ -256,6 +256,9 @@ export default class ShogiPanel {
       }
     }
 
+    context.lineWidth = 2;
+    context.strokeStyle = '#666';
+
     if (this.nextToMap) {
       context.fillStyle = filterColors[nextSide];
       for (const to of this.nextToMap.keys()) {
@@ -263,7 +266,13 @@ export default class ShogiPanel {
         context.beginPath();
         context.arc(x + this.squareW / 2, y + this.squareH / 2, this.squareW * 0.45, 0, Math.PI * 2);
         context.fill();
+        context.stroke();
       }
+    }
+
+    if (this.bestMove) {
+      context.fillStyle = filterColors[nextSide];
+      this.renderArrow(context, this.bestMove, nextSide);
     }
   }
 
@@ -331,6 +340,36 @@ export default class ShogiPanel {
       const cos = inversion ? -1 : 1;
       context.transform(cos, 0, 0, cos, x, y);
       context.fillText(text, 0, 0);
+    } finally {
+      context.restore();
+    }
+  }
+
+  renderArrow(context, move, side) {
+    if (!move) {
+      return;
+    }
+    const [toX, toY] = this.getSquarePoint(getMoveTo(move));
+    const from = getMoveFrom(move);
+    const [fromX, fromY] = isMoveDropped(move) ? this.getHandPoint(side, from) : this.getSquarePoint(from);
+    const l = Math.hypot(toX - fromX, toY - fromY);
+    const r = this.squareW * 0.1;
+    const rr = r * 3;
+    context.save();
+    try {
+      context.translate(toX + this.squareW / 2, toY + this.squareW / 2);
+      context.rotate(Math.atan2(toY - fromY, toX - fromX));
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.lineTo(-rr, -rr);
+      context.lineTo(-rr, -r);
+      context.lineTo(-l, -r);
+      context.lineTo(-l, r);
+      context.lineTo(-rr, r);
+      context.lineTo(-rr, rr);
+      context.closePath();
+      context.fill();
+      context.stroke();
     } finally {
       context.restore();
     }

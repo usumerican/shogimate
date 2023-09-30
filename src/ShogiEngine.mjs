@@ -24,21 +24,17 @@ export default class ShogiEngine {
         }
       });
       await this.callCommand('usi', (line) => line === 'usiok');
-      for (const name in this.options) {
-        await this.postCommand('setoption name ' + name + ' value ' + this.options[name]);
-      }
+      await this.postOptionCommands(this.options);
       await this.callCommand('isready', (line) => line === 'readyok');
     }
     return this.instance;
   }
 
-  postCommand(command) {
-    return new Promise((resolve) => {
-      this.init().then((instance) => {
-        instance.postMessage(command);
-        resolve();
-      });
-    });
+  tryReject(reason) {
+    if (this.reject) {
+      this.reject(reason);
+      this.callback = this.resolve = this.reject = null;
+    }
   }
 
   callCommand(command, callback) {
@@ -53,18 +49,26 @@ export default class ShogiEngine {
     });
   }
 
+  postCommand(command) {
+    return new Promise((resolve) => {
+      this.init().then((instance) => {
+        instance.postMessage(command);
+        resolve();
+      });
+    });
+  }
+
+  async postOptionCommands(options) {
+    for (const name in options) {
+      await this.postCommand('setoption name ' + name + ' value ' + options[name]);
+    }
+  }
+
   terminate() {
     if (this.instance) {
       this.tryReject('terminated');
       this.instance.terminate();
       this.instance = null;
-    }
-  }
-
-  tryReject(reason) {
-    if (this.reject) {
-      this.reject(reason);
-      this.callback = this.resolve = this.reject = null;
     }
   }
 
@@ -75,8 +79,18 @@ export default class ShogiEngine {
   }
 
   async bestmove(gameUsi, time) {
+    await this.postOptionCommands({ MultiPV: 1 });
     await this.postCommand(gameUsi);
-    const line = await this.callCommand('go btime 0 wtime 0 byoyomi ' + time, (line) => line.startsWith('bestmove'));
+    const line = await this.callCommand(
+      'go btime 0 wtime 0 byoyomi ' + time,
+      (line) => (console.log(line), line.startsWith('bestmove'))
+    );
     return line.split(/\s+/)[1];
+  }
+
+  async research(gameUsi, time, MultiPV, callback) {
+    await this.postOptionCommands({ MultiPV });
+    await this.postCommand(gameUsi);
+    return await this.callCommand('go btime 0 wtime 0 byoyomi ' + time, callback);
   }
 }

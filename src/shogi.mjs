@@ -319,18 +319,33 @@ export function formatMoveUsi(move) {
     : formatSquareUsi(from) + toUsi + (isMovePromoted(move) ? '+' : '');
 }
 
+export function makePositionCommand(sfen, moveUsis) {
+  return (
+    'position ' +
+    (sfen === defaultSfen ? 'startpos' : 'sfen ' + sfen) +
+    (moveUsis?.length ? ' moves ' + moveUsis.join(' ') : '')
+  );
+}
+
 export function formatGameUsi(game) {
   const sfen = formatSfen(game.startStep.position);
-  let movesUsi = '';
-  let step = game.startStep.children[0];
-  while (step) {
-    if (!step.move) {
-      break;
-    }
-    movesUsi += ' ' + formatMoveUsi(step.move);
-    step = step.children[0];
+  const moveUsis = [];
+  for (let step = game.startStep.children[0]; step && step.move; step = step.children[0]) {
+    moveUsis.push(formatMoveUsi(step.move));
   }
-  return 'position ' + (sfen === defaultSfen ? 'startpos' : 'sfen ' + sfen) + (movesUsi ? ' moves' + movesUsi : '');
+  return makePositionCommand(sfen, moveUsis);
+}
+
+export function formatGameUsiFromLastStep(lastStep) {
+  const moveUsis = [];
+  let step = lastStep;
+  while (step.parent) {
+    if (step.move) {
+      moveUsis.unshift(formatMoveUsi(step.move));
+    }
+    step = step.parent;
+  }
+  return makePositionCommand(formatSfen(step.position), moveUsis);
 }
 
 export function parseSfen(sfen) {
@@ -404,6 +419,40 @@ export function parseGameUsi(gameUsi) {
     }
   }
   return new Game({ startStep });
+}
+
+const infoKeySet = new Set([
+  'depth',
+  'seldepth',
+  'score',
+  'lowerbound',
+  'upperbound',
+  'multipv',
+  'nodes',
+  'nps',
+  'hashfull',
+  'time',
+  'pv',
+]);
+
+export function parseInfoUsi(infoUsi) {
+  const words = infoUsi.trim().split(/\s+/);
+  if (words[0] !== 'info') {
+    return null;
+  }
+  const infoMap = new Map();
+  for (let i = 1, key; i < words.length; i++) {
+    const word = words[i];
+    if (infoKeySet.has(word)) {
+      infoMap.set(word, []);
+      key = word;
+      continue;
+    }
+    if (key) {
+      infoMap.get(key).push(word);
+    }
+  }
+  return infoMap;
 }
 
 function arrayToMap(arr, map = new Map()) {
