@@ -7,6 +7,7 @@ import HomeView from './HomeView.mjs';
 import ImportView from './ImportView.mjs';
 import MenuView from './MenuView.mjs';
 import QuestionView from './QuestionView.mjs';
+import ResearchView from './ResearchView.mjs';
 import ResultView from './ResultView.mjs';
 import SettingsView from './SettingsView.mjs';
 import { KING, makePiece } from './shogi.mjs';
@@ -71,7 +72,7 @@ export default class App {
         bodyColors: ['#ddf', '#fdd'],
         textColors: ['#00c', '#c00'],
         promotedColors: ['#60f', '#f06'],
-        filterColors: ['#99f6', '#f996'],
+        filterColors: ['#ccf6', '#fcc6'],
       },
     ];
     this.pieceTitleSets = [
@@ -154,6 +155,7 @@ export default class App {
     this.importView = new ImportView(this);
     this.exportView = new ExportView(this);
     this.settingsView = new SettingsView(this);
+    this.researchView = new ResearchView(this);
     new HomeView(this).show();
   }
 

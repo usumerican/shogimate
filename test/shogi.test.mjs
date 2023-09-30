@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { formatGameUsi, formatStep, parseGameUsi, parseMoveUsi } from '../src/shogi.mjs';
+import {
+  formatGameUsi,
+  formatGameUsiFromLastStep,
+  formatStep,
+  parseGameUsi,
+  parseInfoUsi,
+  parseMoveUsi,
+} from '../src/shogi.mjs';
 
 describe('shogi', () => {
   test('gameUsi', () => {
@@ -33,5 +40,23 @@ describe('shogi', () => {
     step = step.appendMove(parseMoveUsi('3a2b'));
     step = step.appendMove(parseMoveUsi('B*4e'));
     expect(formatStep(step)).toEqual('☗４五角打');
+  });
+
+  test('parseInfoUsi', () => {
+    const infoMap = parseInfoUsi('info depth 8 seldepth 4 score mate 3 nodes 1322 nps 47214 time 28 pv B*3g 5i5h S*4i');
+    expect(infoMap.get('depth')).toEqual(['8']);
+    expect(infoMap.get('score')).toEqual(['mate', '3']);
+    expect(infoMap.get('pv')).toEqual(['B*3g', '5i5h', 'S*4i']);
+  });
+
+  test('formatGameUsiFromLastStep', () => {
+    let step = parseGameUsi('startpos').startStep;
+    expect(formatGameUsiFromLastStep(step)).toEqual('position startpos');
+    step = step.appendMove(parseMoveUsi('7g7f'));
+    expect(formatGameUsiFromLastStep(step)).toEqual('position startpos moves 7g7f');
+    step = step.appendMove(parseMoveUsi('3c3d'));
+    expect(formatGameUsiFromLastStep(step)).toEqual('position startpos moves 7g7f 3c3d');
+    step = step.appendEnd('resign');
+    expect(formatGameUsiFromLastStep(step)).toEqual('position startpos moves 7g7f 3c3d');
   });
 });

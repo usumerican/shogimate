@@ -157,7 +157,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 135vw) minmax($rh, auto) minmax($rh, auto);
+    grid-template-rows:  minmax($rh, auto) minmax($rh, auto) minmax(auto, 135vw) minmax($rh, auto) minmax($rh, auto);
     place-items: stretch;
 
     .ShogiPanel {
@@ -302,5 +302,48 @@
         grid-template-columns: 1fr 2fr;
       }
     }
+  }
+
+  .ResearchView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $hh 1fr auto $rh;
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #fff;
+    }
+
+    .InfoTable {
+      display: block;
+      overflow-y: scroll;
+    }
+
+    .InfoTbody {
+      display: table;
+      width: 100%;
+      white-space: nowrap;
+
+      tr {
+        height: $hh;
+      }
+
+      td {
+        background: #fff;
+      }
+    }
+  }
+
+  .ProgressView {
+    background: #fff9;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
   }
 }

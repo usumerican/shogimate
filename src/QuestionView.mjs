@@ -4,7 +4,6 @@ import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
 import {
   Step,
-  formatMoveUsi,
   formatGameUsi,
   formatSfen,
   formatStep,
@@ -19,18 +18,22 @@ import {
   squareN,
   usiEndNameMap,
   parseGameUsi,
+  formatGameUsiFromLastStep,
 } from './shogi.mjs';
 
 export default class QuestionView {
   constructor(app) {
     this.el = parseHtml(`
       <div class="QuestionView">
-        <div class="TitleOutput Center"></div>
-        <div class="ToolBar">
+        <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
+          <div class="TitleOutput Center"></div>
+          <button class="MenuButton">メニュー</button>
+        </div>
+        <div class="TitleBar">
+          <button class="ResearchButton">検討</button>
           <select class="RecordSelect"></select>
           <button class="CollectButton">コレクト</button>
-          <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
         <div class="TitleBar">
@@ -92,6 +95,10 @@ export default class QuestionView {
           }
           break;
       }
+    });
+
+    on(this.el.querySelector('.ResearchButton'), 'click', () => {
+      this.app.researchView.show(this.shogiPanel);
     });
 
     on(this.collectButton, 'click', () => {
@@ -404,7 +411,7 @@ export default class QuestionView {
       const time = 500;
       const moveUsi = (
         await Promise.all([
-          this.app.engine.bestmove(this.playGameUsi, time),
+          this.app.engine.bestmove(formatGameUsiFromLastStep(this.playStep), time),
           new Promise((resolve) => setTimeout(resolve, time)),
         ])
       )[0];
@@ -442,7 +449,7 @@ export default class QuestionView {
   async getFromToMap() {
     if (!this.fromToMap) {
       this.fromToMap = new Map();
-      const moveUsis = await this.app.engine.checks(this.playGameUsi);
+      const moveUsis = await this.app.engine.checks(formatGameUsiFromLastStep(this.playStep));
       for (const move of moveUsis.map((moveUsi) => parseMoveUsi(moveUsi)).filter((move) => move)) {
         const from = getMoveFrom(move);
         const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
@@ -517,16 +524,6 @@ export default class QuestionView {
     this.playStep = this.playSteps[this.playIndex];
     this.playSide = this.playStep.position.sideToMove;
     this.playNumber = this.playStep.position.number - this.startNumber;
-    let movesUsi = '';
-    for (let step = this.playStep; step.parent; step = step.parent) {
-      if (step.move) {
-        movesUsi = ' ' + formatMoveUsi(step.move) + movesUsi;
-      }
-    }
-    this.playGameUsi = 'position sfen ' + this.startSfen;
-    if (movesUsi) {
-      this.playGameUsi += ' moves' + movesUsi;
-    }
     this.fromToMap = null;
     this.stepSelect.selectedIndex = playIndex;
     this.stepPrevButton.disabled = !this.canPlayReset();
