@@ -346,4 +346,20 @@
     height: 100%;
     font-size: 1.5rem;
   }
+
+  .BrowseView {
+    background: $tc;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $rh 1fr $rh;
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #fff;
+    }
+  }
 }

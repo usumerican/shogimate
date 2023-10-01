@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
 import {
@@ -98,7 +99,7 @@ export default class QuestionView {
     });
 
     on(this.el.querySelector('.ResearchButton'), 'click', () => {
-      this.app.researchView.show(this.shogiPanel);
+      new ResearchView(this.app).show(this.shogiPanel);
     });
 
     on(this.collectButton, 'click', () => {
