@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import BrowseView from './BrowseView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml } from './browser.mjs';
@@ -35,7 +36,7 @@ export default class ResearchView {
         </div>
       </div>
     `);
-    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'));
     this.infoTable = this.el.querySelector('.InfoTable');
     this.infoTbody = this.el.querySelector('.InfoTbody');
     this.timeSelect = this.el.querySelector('.TimeSelect');
@@ -93,6 +94,9 @@ export default class ResearchView {
       row.depthOutput = row.querySelector('.DepthOutput');
       row.scoreOutput = row.querySelector('.ScoreOutput');
       row.pvOutput = row.querySelector('.PvOutput');
+      on(row, 'click', () => {
+        new BrowseView(this.app).show('読み筋', this.shogiPanel, row.moveUsis);
+      });
       this.infoRows.push(row);
     }
     this.infoTbody.replaceChildren(...this.infoRows);
@@ -113,11 +117,11 @@ export default class ResearchView {
         row.title = line;
         row.depthOutput.textContent = infoMap.get('depth')?.[0] + '/' + infoMap.get('seldepth')?.[0];
         row.scoreOutput.textContent = infoMap.get('score')?.join(' ');
-        const moveUsis = infoMap.get('pv');
-        if (moveUsis) {
+        row.moveUsis = infoMap.get('pv');
+        if (row.moveUsis) {
           const names = [];
           let step = this.step;
-          for (const moveUsi of moveUsis) {
+          for (const moveUsi of row.moveUsis) {
             const move = parseMoveUsi(moveUsi);
             if (move) {
               step = step.appendMove(move);
