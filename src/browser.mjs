@@ -59,8 +59,9 @@ export function onLongPress(target, listener, startTime = 500, repeatTime = 100)
 }
 
 export function setSelectValue(target, value, defaultValue) {
+  const s = String(value);
   for (const option of target.options) {
-    if (option.value === value) {
+    if (option.value === s) {
       option.selected = true;
       return;
     }

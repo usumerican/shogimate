@@ -276,6 +276,14 @@ export class Step {
     this.children.push(step);
     return step;
   }
+
+  appendMoveUsi(moveUsi) {
+    const move = parseMoveUsi(moveUsi);
+    if (move) {
+      return this.appendMove(move);
+    }
+    return this.appendEnd(usiEndNameMap.get(moveUsi) || moveUsi);
+  }
 }
 
 export function formatStep(step) {
@@ -319,6 +327,14 @@ export function formatMoveUsi(move) {
     : formatSquareUsi(from) + toUsi + (isMovePromoted(move) ? '+' : '');
 }
 
+export function formatMoveUsis(step) {
+  const moveUsis = [];
+  for (let st = step.children[0]; st && st.move; st = st.children[0]) {
+    moveUsis.push(formatMoveUsi(st.move));
+  }
+  return moveUsis;
+}
+
 export function makePositionCommand(sfen, moveUsis) {
   return (
     'position ' +
@@ -328,12 +344,7 @@ export function makePositionCommand(sfen, moveUsis) {
 }
 
 export function formatGameUsi(game) {
-  const sfen = formatSfen(game.startStep.position);
-  const moveUsis = [];
-  for (let step = game.startStep.children[0]; step && step.move; step = step.children[0]) {
-    moveUsis.push(formatMoveUsi(step.move));
-  }
-  return makePositionCommand(sfen, moveUsis);
+  return makePositionCommand(formatSfen(game.startStep.position), formatMoveUsis(game.startStep));
 }
 
 export function formatGameUsiFromLastStep(lastStep) {

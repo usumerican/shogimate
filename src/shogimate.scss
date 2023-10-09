@@ -157,65 +157,11 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows:  minmax($rh, auto) minmax($rh, auto) minmax(auto, 135vw) minmax($rh, auto) minmax($rh, auto);
+    grid-template-rows: $hh $rh 1fr $rh $rh;
     place-items: stretch;
 
     .ShogiPanel {
       background: #ffd;
-    }
-
-    .Answering {
-      background: #fff;
-    }
-
-    .TabBar {
-      border: 1px solid $bc;
-      border-radius: $gap;
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: 1fr;
-
-      button {
-        background: #eee;
-        border: none;
-        border-radius: 0;
-      }
-
-      .Selected {
-        background: #cff;
-        font-weight: bold;
-      }
-    }
-  }
-
-  .ResultView {
-    background: #0003;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    padding: $gap;
-    display: grid;
-    gap: $gap;
-    grid-template-rows: $hh minmax($rh, auto) minmax(auto, 130vw) minmax($rh, auto) minmax($rh, auto);
-
-    .MessageOutput {
-      grid-row: 1 / 3;
-      background: #fcc;
-      font-size: 1rem;
-    }
-
-    .Success {
-      background: #cfc;
-    }
-
-    .ItemList {
-      grid-row: 4/ 6;
-      background: $tc;
-      padding: $gap;
-      display: grid;
-      gap: $gap;
-      grid-auto-flow: column;
-      grid-auto-columns: 1fr;
     }
   }
 
@@ -312,11 +258,11 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: $hh 1fr auto $rh;
+    grid-template-rows: $rh 1fr auto $rh;
     place-items: stretch;
 
     .ShogiPanel {
-      background: #fff;
+      background: #eff;
     }
 
     .InfoTable {
@@ -327,24 +273,40 @@
     .InfoTbody {
       display: table;
       width: 100%;
-      white-space: nowrap;
 
       tr {
-        height: $hh;
+        height: 5vh;
+        white-space: nowrap;
+      }
+
+      th {
+        background: #eee;
+        text-align: left;
       }
 
       td {
         background: #fff;
       }
+
+      .PvOutput {
+        width: 100%;
+        max-width: 0;
+        text-overflow: ellipsis;
+      }
     }
   }
 
   .ProgressView {
-    background: #fff9;
     position: absolute;
     width: 100%;
     height: 100%;
     font-size: 1.5rem;
+    color: #fff;
+    text-shadow:
+      1px 1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      -1px -1px 0 #000;
   }
 
   .BrowseView {

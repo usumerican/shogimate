@@ -106,8 +106,9 @@ export default class CollectionView {
   }
 
   show() {
+    const limitSet = new Set(this.app.getState(['collection', 'limits']));
     for (const item of this.limitItems) {
-      item.checkbox.checked = this.app.limitSet.has(item.limit);
+      item.checkbox.checked = limitSet.has(item.limit);
     }
     this.updateCounts();
     this.app.pushView(this);
@@ -123,11 +124,8 @@ export default class CollectionView {
       }
     }
     if (records.length) {
-      this.app.limitSet.clear();
-      for (const limit of limits) {
-        this.app.limitSet.add(limit);
-      }
-      this.app.saveLimitSet();
+      this.app.setState(['collection', 'limits'], limits);
+      this.app.saveState();
       await this.app.questionView.show(records, startRecordOrder, 'コレクション');
       this.updateCounts();
     }
