@@ -1,5 +1,7 @@
 /* eslint-env browser */
 
+import BrowseView from './BrowseView.mjs';
+import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
@@ -20,34 +22,30 @@ import {
   usiEndNameMap,
   parseGameUsi,
   formatGameUsiFromLastStep,
+  formatMoveUsis,
 } from './shogi.mjs';
 
 export default class QuestionView {
   constructor(app) {
     this.el = parseHtml(`
       <div class="QuestionView">
-        <div class="TitleBar">
+        <div class="TitleOutput Center"></div>
+        <div class="ToolBar">
           <button class="CloseButton">閉じる</button>
-          <div class="TitleOutput Center"></div>
-          <button class="MenuButton">メニュー</button>
-        </div>
-        <div class="TitleBar">
-          <button class="ResearchButton">検討</button>
           <select class="RecordSelect"></select>
           <button class="CollectButton">コレクト</button>
+          <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
         <div class="TitleBar">
-          <button class="StepPrevButton"></button>
+          <button class="ResetButton">やり直す</button>
           <select class="StepSelect"></select>
-          <button class="StepNextButton"></button>
+          <button class="UndoButton">待った</button>
         </div>
-        <div class="TitleBar">
+        <div class="ToolBar">
           <button class="RecordPrevButton">前問</button>
-          <div class="TabBar">
-            <button class="PlayButton Center">実戦</button>
-            <button class="AnswerButton Center">解答例</button>
-          </div>
+          <button class="ResearchButton">検討</button>
+          <button class="AnswerButton">解答例</button>
           <button class="RecordNextButton">次問</button>
         </div>
       </div>
@@ -58,12 +56,11 @@ export default class QuestionView {
     this.recordPrevButton = this.el.querySelector('.RecordPrevButton');
     this.recordNextButton = this.el.querySelector('.RecordNextButton');
     this.collectButton = this.el.querySelector('.CollectButton');
-    this.playButton = this.el.querySelector('.PlayButton');
     this.answerButton = this.el.querySelector('.AnswerButton');
     this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
     this.stepSelect = this.el.querySelector('.StepSelect');
-    this.stepPrevButton = this.el.querySelector('.StepPrevButton');
-    this.stepNextButton = this.el.querySelector('.StepNextButton');
+    this.resetButton = this.el.querySelector('.ResetButton');
+    this.undoButton = this.el.querySelector('.UndoButton');
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide(this.changed);
@@ -127,55 +124,26 @@ export default class QuestionView {
       this.doRecordNext();
     });
 
-    on(this.playButton, 'click', () => {
-      this.doPlay();
-    });
-
     on(this.answerButton, 'click', () => {
-      this.doAnswer();
+      if (this.limit) {
+        this.stopClock();
+        new BrowseView(this.app).show('解答例', this.shogiPanel, this.startStep, this.answerMoveUsis, 1);
+      } else {
+        this.app.confirmView.show('解答例はありません。', ['OK']);
+      }
     });
 
     on(this.stepSelect, 'change', () => {
-      if (this.answering) {
-        this.changeAnswerStep(this.stepSelect.selectedIndex);
-      } else {
-        this.changePlayStep(this.stepSelect.selectedIndex);
-      }
+      this.changePlayStep(this.stepSelect.selectedIndex);
     });
 
-    onLongPress(this.stepPrevButton, () => {
-      if (this.answering) {
-        this.doAnswerPrev();
-      } else {
-        this.doPlayReset();
-        return true;
-      }
+    on(this.resetButton, 'click', () => {
+      this.doPlayReset();
     });
 
-    onLongPress(this.stepNextButton, () => {
-      if (this.answering) {
-        this.doAnswerNext();
-      } else {
-        this.doPlayUndo();
-        return true;
-      }
+    on(this.undoButton, 'click', () => {
+      this.doPlayUndo();
     });
-  }
-
-  onSquare(sq) {
-    if (this.answering) {
-      this.doAnswerNext();
-    } else {
-      this.doPlaySquare(sq);
-    }
-  }
-
-  onHand(side, base) {
-    if (this.answering) {
-      this.doAnswerPrev();
-    } else {
-      this.doPlayHand(side, base);
-    }
   }
 
   show(records, startRecordOrder, title, bookName, volumeName) {
@@ -271,42 +239,31 @@ export default class QuestionView {
   updateRecord() {
     this.titleOutput.textContent = `${this.title} (${this.recordOrder + 1}/${this.records.length})`;
     this.recordSelect.value = this.recordOrder;
+    this.recordPrevButton.disabled = !this.canRecordPrev();
+    this.recordNextButton.disabled = !this.canRecordNext();
     const [gameUsi, rate] = this.records[this.recordIndices[this.recordOrder]].split('\t');
     this.game = parseGameUsi(gameUsi);
-    this.rate = rate;
     this.startStep = new Step(this.game.startStep);
     this.startSfen = formatSfen(this.startStep.position);
     this.startSide = this.startStep.position.sideToMove;
     this.startNumber = this.startStep.position.number;
-    this.playSteps = [];
-    this.playOptions = [];
-    this.playIndex = -1;
-    this.appendPlayStep(this.startStep);
-    this.playButton.disabled = this.rate;
-    this.collectButton.disabled = this.rate;
-    this.answerSteps = [];
-    for (let step = this.startStep; step; step = step.children[0]) {
-      this.answerSteps.push(step);
-    }
-    this.limit = this.answerSteps.length - 1;
-    this.answerOptions = this.answerSteps.map(
-      (step) =>
-        new Option(step.position.number > this.startNumber ? this.formatStepOption(step) : `解答例 (${this.limit}手)`)
-    );
-    this.answerButton.disabled = !this.limit;
-    this.recordPrevButton.disabled = !this.canRecordPrev();
-    this.recordNextButton.disabled = !this.canRecordNext();
     this.shogiPanel.inversion = this.startSide ^ this.inversion;
     this.shogiPanel.sideNames[this.startSide] = '攻方';
     this.shogiPanel.sideNames[this.startSide ^ 1] = '受方';
     this.shogiPanel.clocks[this.startSide] = '';
     this.shogiPanel.clocks[this.startSide ^ 1] = '';
-    if (this.rate) {
-      this.doAnswer();
-    } else {
-      this.doPlay();
-      this.startClock();
-    }
+    this.answerMoveUsis = formatMoveUsis(this.startStep);
+    this.limit = this.answerMoveUsis.length;
+    this.answerButton.disabled = !this.limit;
+    this.rate = rate;
+    this.collectButton.disabled = this.rate;
+    this.playSteps = [];
+    this.playIndex = -1;
+    this.playOptions = [];
+    this.stepSelect.replaceChildren();
+    this.appendPlayStep(this.startStep);
+    this.changePlayStep(0);
+    this.startClock();
   }
 
   startClock() {
@@ -325,18 +282,11 @@ export default class QuestionView {
     this.clockId = 0;
   }
 
-  doPlay() {
-    this.answering = false;
-    this.shogiPanel.el.classList.remove('Answering');
-    this.answerButton.classList.remove('Selected');
-    this.playButton.classList.add('Selected');
-    this.stepSelect.replaceChildren(...this.playOptions);
-    this.stepPrevButton.textContent = 'やり直す';
-    this.stepNextButton.textContent = '待った';
-    this.changePlayStep(0);
+  isPlayExceeded() {
+    return !this.rate && this.startRecordOrder >= 0 && this.limit && this.playNumber > this.limit;
   }
 
-  async doPlaySquare(sq) {
+  async onSquare(sq) {
     if (this.isPlayExceeded()) {
       return;
     }
@@ -372,7 +322,7 @@ export default class QuestionView {
     this.shogiPanel.request();
   }
 
-  async doPlayHand(side, base) {
+  async onHand(side, base) {
     if (this.isPlayExceeded()) {
       return;
     }
@@ -404,9 +354,9 @@ export default class QuestionView {
     this.changePlayStep(this.playSteps.length - 1);
     if (this.playSide === this.startSide) {
       if (this.isPlayExceeded()) {
-        await this.endPlay(`${this.limit}手で詰みませんでした。`);
+        await this.endPlay('不詰');
       } else if (!(await this.getFromToMap()).size) {
-        await this.endPlay('差せる手がありません。');
+        await this.endPlay('中断');
       }
     } else {
       const time = 500;
@@ -424,72 +374,48 @@ export default class QuestionView {
         }
       }
       if (moveUsi === 'resign') {
-        this.stopClock();
-        this.appendPlayStep(this.playStep.appendEnd('詰み'));
-        this.changePlayStep(this.playSteps.length - 1);
-        switch (
-          await this.app.resultView.show(`${this.playNumber}手で詰みました。`, ['閉じる', '解答例', '次問'], true)
-        ) {
-          case 1:
-            this.doAnswer();
-            break;
-          case 2:
-            this.doRecordNext();
-            break;
-        }
+        this.endPlay('詰み');
       } else {
-        await this.endPlay(`${usiEndNameMap.get(moveUsi) || moveUsi}です。`);
+        await this.endPlay(usiEndNameMap.get(moveUsi) || moveUsi);
       }
     }
   }
 
-  isPlayExceeded() {
-    return this.startRecordOrder >= 0 && this.limit && this.playNumber > this.limit;
+  async endPlay(endName) {
+    this.stopClock();
+    this.appendPlayStep(this.playStep.appendEnd(endName));
+    this.changePlayStep(this.playSteps.length - 1);
+    const [message, background] = endName === '詰み' ? ['成功', '#cfc6'] : ['失敗', '#fcc6'];
+    new ProgressView(this.app).show(message, background, 1000);
   }
 
   async getFromToMap() {
     if (!this.fromToMap) {
       this.fromToMap = new Map();
-      const moveUsis = await this.app.engine.checks(formatGameUsiFromLastStep(this.playStep));
-      for (const move of moveUsis.map((moveUsi) => parseMoveUsi(moveUsi)).filter((move) => move)) {
-        const from = getMoveFrom(move);
-        const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
-        let toMap = this.fromToMap.get(key);
-        if (!toMap) {
-          toMap = new Map();
-          this.fromToMap.set(key, toMap);
+      for (const moveUsi of await this.app.engine.moves(formatGameUsiFromLastStep(this.playStep), !this.rate)) {
+        const move = parseMoveUsi(moveUsi);
+        if (move) {
+          const from = getMoveFrom(move);
+          const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
+          let toMap = this.fromToMap.get(key);
+          if (!toMap) {
+            toMap = new Map();
+            this.fromToMap.set(key, toMap);
+          }
+          const to = getMoveTo(move);
+          toMap.set(to, (toMap.get(to) || 0) | (isMovePromoted(move) ? 2 : 1));
         }
-        const to = getMoveTo(move);
-        toMap.set(to, (toMap.get(to) || 0) | (isMovePromoted(move) ? 2 : 1));
       }
     }
     return this.fromToMap;
   }
 
-  async endPlay(message) {
-    this.stopClock();
-    this.appendPlayStep(this.playStep.appendEnd('不詰'));
-    this.changePlayStep(this.playSteps.length - 1);
-    switch (await this.app.resultView.show(`${message}`, ['閉じる', 'やり直す', '待った'])) {
-      case 1:
-        this.doPlayReset();
-        break;
-      case 2:
-        this.doPlayUndo();
-        break;
-    }
-  }
-
   appendPlayStep(step) {
     this.playSteps.push(step);
-    const option = new Option(this.formatStepOption(step));
+    const option = new Option((step.isMove() ? `${step.position.number - this.startNumber}. ` : '') + formatStep(step));
     option.parentIndex = this.playIndex;
     this.playOptions.push(option);
     this.stepSelect.appendChild(option);
-  }
-
-  formatStepOption(step) {
-    return (step.isMove() ? `${step.position.number - this.startNumber}. ` : '') + formatStep(step);
   }
 
   canPlayReset() {
@@ -526,57 +452,11 @@ export default class QuestionView {
     this.playSide = this.playStep.position.sideToMove;
     this.playNumber = this.playStep.position.number - this.startNumber;
     this.fromToMap = null;
-    this.stepSelect.selectedIndex = playIndex;
-    this.stepPrevButton.disabled = !this.canPlayReset();
-    this.stepNextButton.disabled = !this.canPlayReset();
+    this.stepSelect.selectedIndex = this.playIndex;
+    this.resetButton.disabled = !this.canPlayReset();
+    this.undoButton.disabled = !this.canPlayReset();
     this.shogiPanel.step = this.playStep;
     this.shogiPanel.resetNext();
-    this.shogiPanel.request();
-  }
-
-  doAnswer() {
-    if (this.limit) {
-      this.stopClock();
-      this.answering = true;
-      this.shogiPanel.el.classList.add('Answering');
-      this.shogiPanel.resetNext();
-      this.stepSelect.replaceChildren(...this.answerOptions);
-      this.playButton.classList.remove('Selected');
-      this.answerButton.classList.add('Selected');
-      this.changeAnswerStep(0);
-    } else {
-      this.app.confirmView.show('解答例はありません。', ['OK']);
-    }
-  }
-
-  canAnswerPrev() {
-    return this.answerIndex > 0;
-  }
-
-  doAnswerPrev() {
-    if (this.canAnswerPrev()) {
-      this.changeAnswerStep(this.answerIndex - 1);
-    }
-  }
-
-  canAnswerNext() {
-    return this.answerIndex < this.limit;
-  }
-
-  doAnswerNext() {
-    if (this.canAnswerNext()) {
-      this.changeAnswerStep(this.answerIndex + 1);
-    }
-  }
-
-  changeAnswerStep(answerIndex) {
-    this.answerIndex = answerIndex;
-    this.stepSelect.selectedIndex = answerIndex;
-    this.stepPrevButton.textContent = '前手';
-    this.stepPrevButton.disabled = !this.canAnswerPrev();
-    this.stepNextButton.textContent = '次手';
-    this.stepNextButton.disabled = !this.canAnswerNext();
-    this.shogiPanel.step = this.answerSteps[answerIndex];
     this.shogiPanel.request();
   }
 }

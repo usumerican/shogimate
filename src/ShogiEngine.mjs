@@ -8,7 +8,6 @@ export default class ShogiEngine {
       NetworkDelay2: 0,
       MinimumThinkingTime: 1000,
       PvInterval: 0,
-      ConsiderationMode: true,
     };
   }
 
@@ -72,25 +71,26 @@ export default class ShogiEngine {
     }
   }
 
-  async checks(gameUsi) {
+  async moves(gameUsi, checksOnly) {
     await this.postCommand(gameUsi);
-    const line = (await this.callCommand('checks', () => true)).trim();
+    const line = (await this.callCommand(checksOnly ? 'checks' : 'moves', () => true)).trim();
     return line ? line.split(/\s+/) : [];
   }
 
-  async bestmove(gameUsi, time) {
-    await this.postOptionCommands({ MultiPV: 1 });
+  async think(gameUsi, time, options, callback) {
+    await this.postOptionCommands(options);
     await this.postCommand(gameUsi);
-    const line = await this.callCommand(
+    return await this.callCommand(
       'go btime 0 wtime 0 byoyomi ' + time,
-      (line) => (console.log(line), line.startsWith('bestmove'))
+      (line) => line.startsWith('bestmove') || callback?.(line)
     );
-    return line.split(/\s+/)[1];
   }
 
-  async research(gameUsi, time, MultiPV, callback) {
-    await this.postOptionCommands({ MultiPV });
-    await this.postCommand(gameUsi);
-    return await this.callCommand('go btime 0 wtime 0 byoyomi ' + time, callback);
+  async bestmove(gameUsi, time) {
+    return (await this.think(gameUsi, time, { ConsiderationMode: false, MultiPV: 1 })).split(/\s+/)[1];
+  }
+
+  async research(gameUsi, time, mpv, callback) {
+    return await this.think(gameUsi, time, { ConsiderationMode: true, MultiPV: mpv }, callback);
   }
 }

@@ -3,28 +3,23 @@
 import BrowseView from './BrowseView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
-import { on, parseHtml } from './browser.mjs';
-import { Step, formatGameUsiFromLastStep, formatStep, parseInfoUsi, parseMoveUsi, usiEndNameMap } from './shogi.mjs';
+import { on, parseHtml, setSelectValue } from './browser.mjs';
+import { Step, formatGameUsiFromLastStep, formatStep, parseInfoUsi, parseMoveUsi } from './shogi.mjs';
 
 export default class ResearchView {
   constructor(app) {
     this.app = app;
     this.el = parseHtml(`
       <div class="ResearchView">
-        <div class="Center">検討</div>
+        <div class="TitleBar">
+          <button class="CloseButton">閉じる</button>
+          <div class="Center">検討</div>
+        </div>
         <canvas class="ShogiPanel"></canvas>
         <table class="InfoTable">
           <tbody class="InfoTbody"></tbody>
         </table>
         <div class="ToolBar">
-          <button class="CloseButton">閉じる</button>
-          <select class="TimeSelect">
-            <option value="1000">1秒</option>
-            <option value="2000">2秒</option>
-            <option value="3000">3秒</option>
-            <option value="4000">4秒</option>
-            <option value="5000">5秒</option>
-          </select>
           <select class="MpvSelect">
             <option value="1">1位のみ</option>
             <option value="2">2位まで</option>
@@ -32,7 +27,14 @@ export default class ResearchView {
             <option value="4">4位まで</option>
             <option value="5">5位まで</option>
           </select>
-          <button class="StartButton">検討</button>
+          <select class="TimeSelect">
+            <option value="1000">1秒</option>
+            <option value="2000">2秒</option>
+            <option value="3000">3秒</option>
+            <option value="4000">4秒</option>
+            <option value="5000">5秒</option>
+          </select>
+          <button class="StartButton">再検討</button>
         </div>
       </div>
     `);
@@ -47,7 +49,12 @@ export default class ResearchView {
     });
 
     on(this.el.querySelector('.StartButton'), 'click', () => {
-      this.doResearch(this.timeSelect.value, this.mpvSelect.value);
+      const time = +this.timeSelect.value;
+      const mpv = +this.mpvSelect.value;
+      this.app.setState(['research', 'time'], time);
+      this.app.setState(['research', 'mpv'], mpv);
+      this.app.saveState();
+      this.doResearch(time, mpv);
     });
   }
 
@@ -58,6 +65,8 @@ export default class ResearchView {
     this.shogiPanel.sideNames = parentPanel.sideNames;
     this.shogiPanel.pieceStyle = parentPanel.pieceStyle;
     this.shogiPanel.pieceTitleSet = parentPanel.pieceTitleSet;
+    setSelectValue(this.timeSelect, this.app.getState(['research', 'time']));
+    setSelectValue(this.mpvSelect, this.app.getState(['research', 'mpv']));
     this.app.pushView(this);
     this.doResearch();
   }
@@ -74,10 +83,10 @@ export default class ResearchView {
     this.infoTbody.innerHTML = '';
     const headerRow = parseHtml(`
     <tr class="InfoRow">
-      <td>順位</td>
-      <td>深さ</td>
-      <td>評価値</td>
-      <td class="InfoOutput"></td>
+      <th>順位</th>
+      <th>評価値</th>
+      <th>深さ</th>
+      <th class="InfoOutput"></th>
     </tr>
   `);
     const infoOutput = headerRow.querySelector('.InfoOutput');
@@ -86,53 +95,44 @@ export default class ResearchView {
       const row = parseHtml(`
         <tr class="InfoRow">
           <td>${i + 1}</td>
-          <td class="DepthOutput"></td>
           <td class="ScoreOutput"></td>
+          <td class="DepthOutput"></td>
           <td class="PvOutput"></td>
         </tr>
       `);
-      row.depthOutput = row.querySelector('.DepthOutput');
       row.scoreOutput = row.querySelector('.ScoreOutput');
+      row.depthOutput = row.querySelector('.DepthOutput');
       row.pvOutput = row.querySelector('.PvOutput');
       on(row, 'click', () => {
-        new BrowseView(this.app).show('読み筋', this.shogiPanel, row.moveUsis);
+        new BrowseView(this.app).show('読み筋', this.shogiPanel, this.step, row.moveUsis, 1);
       });
       this.infoRows.push(row);
     }
     this.infoTbody.replaceChildren(...this.infoRows);
     await this.app.engine.research(formatGameUsiFromLastStep(this.step), time, mpv, (line) => {
       console.log(line);
-      if (line.startsWith('bestmove')) {
-        this.shogiPanel.bestMove = parseMoveUsi(line.split(/\s+/)[1]);
-        this.shogiPanel.request();
-        progressView.hide();
-        return true;
-      }
       const infoMap = parseInfoUsi(line);
       if (infoMap) {
-        infoOutput.textContent = `${(infoMap.get('time')?.[0] / 1000).toFixed(1)}秒 ${(+infoMap.get(
-          'nodes'
-        )?.[0]).toLocaleString()}面`;
+        infoOutput.textContent =
+          (infoMap.get('time')?.[0] / 1000).toFixed(1) + '秒 ' + (+infoMap.get('nodes')?.[0]).toLocaleString() + '面 ';
         const row = this.infoRows[infoMap.get('multipv')?.[0] || 1];
-        row.title = line;
-        row.depthOutput.textContent = infoMap.get('depth')?.[0] + '/' + infoMap.get('seldepth')?.[0];
         row.scoreOutput.textContent = infoMap.get('score')?.join(' ');
-        row.moveUsis = infoMap.get('pv');
-        if (row.moveUsis) {
-          const names = [];
-          let step = this.step;
-          for (const moveUsi of row.moveUsis) {
-            const move = parseMoveUsi(moveUsi);
-            if (move) {
-              step = step.appendMove(move);
-            } else {
-              step = step.appendEnd(usiEndNameMap.get(moveUsi) || moveUsi);
-            }
-            names.push(formatStep(step));
-          }
-          row.pvOutput.textContent = names.join(' ');
+        row.depthOutput.textContent = infoMap.get('depth')?.[0] + '/' + infoMap.get('seldepth')?.[0];
+        row.moveUsis = infoMap.get('pv') || [];
+        const names = [];
+        let st = new Step(this.step);
+        for (const moveUsi of row.moveUsis) {
+          st = st.appendMoveUsi(moveUsi);
+          names.push(formatStep(st));
         }
+        row.pvOutput.textContent = row.pvOutput.title = names.join(' ');
       }
     });
+    const bestMoveUsi = this.infoRows[1]?.moveUsis[0];
+    if (bestMoveUsi) {
+      this.shogiPanel.bestMove = parseMoveUsi(bestMoveUsi);
+      this.shogiPanel.request();
+    }
+    progressView.hide();
   }
 }

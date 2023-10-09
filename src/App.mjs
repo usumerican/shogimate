@@ -7,7 +7,6 @@ import HomeView from './HomeView.mjs';
 import ImportView from './ImportView.mjs';
 import MenuView from './MenuView.mjs';
 import QuestionView from './QuestionView.mjs';
-import ResultView from './ResultView.mjs';
 import SettingsView from './SettingsView.mjs';
 import { KING, makePiece } from './shogi.mjs';
 
@@ -30,7 +29,6 @@ export default class App {
     this.state = this.loadItem('state') || {};
     this.settings = this.loadItem('settings') || {};
     this.collection = new Set(this.loadItem('collection') || []);
-    this.limitSet = new Set(this.loadItem('limits') || []);
     this.pieceSounds = [
       {
         name: '',
@@ -149,7 +147,6 @@ export default class App {
     this.confirmView = new ConfirmView(this);
     this.menuView = new MenuView(this);
     this.questionView = new QuestionView(this);
-    this.resultView = new ResultView(this);
     this.collectionView = new CollectionView(this);
     this.importView = new ImportView(this);
     this.exportView = new ExportView(this);
@@ -229,10 +226,6 @@ export default class App {
 
   saveCollection() {
     this.saveItem('collection', [...this.collection]);
-  }
-
-  saveLimitSet() {
-    this.saveItem('limits', [...this.limitSet]);
   }
 
   async fetchRecords(bookName, volumeName) {
