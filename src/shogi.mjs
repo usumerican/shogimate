@@ -432,7 +432,7 @@ export function parseGameUsi(gameUsi) {
   return new Game({ startStep });
 }
 
-const infoKeySet = new Set([
+const pvInfoKeySet = new Set([
   'depth',
   'seldepth',
   'score',
@@ -446,24 +446,24 @@ const infoKeySet = new Set([
   'pv',
 ]);
 
-export function parseInfoUsi(infoUsi) {
-  const words = infoUsi.trim().split(/\s+/);
+export function parsePvInfoUsi(pvInfoUsi) {
+  const words = pvInfoUsi.trim().split(/\s+/);
   if (words[0] !== 'info') {
     return null;
   }
-  const infoMap = new Map();
+  const pvInfo = new Map();
   for (let i = 1, key; i < words.length; i++) {
     const word = words[i];
-    if (infoKeySet.has(word)) {
-      infoMap.set(word, []);
+    if (pvInfoKeySet.has(word)) {
+      pvInfo.set(word, []);
       key = word;
       continue;
     }
     if (key) {
-      infoMap.get(key).push(word);
+      pvInfo.get(key).push(word);
     }
   }
-  return infoMap;
+  return pvInfo;
 }
 
 function arrayToMap(arr, map = new Map()) {

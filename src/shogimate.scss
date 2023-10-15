@@ -1,7 +1,7 @@
 .shogimate {
-  $gap: 0.4vh;
-  $rh: 7.5vh;
-  $hh: 4.4vh;
+  $gap: 0.2vh;
+  $rh: 6vh;
+  $hh: 4vh;
   $tc: #fd0;
   $bc: #999;
   position: relative;
@@ -258,29 +258,30 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: $rh 1fr auto $rh;
+    grid-template-rows: $rh 4fr $rh 1fr;
     place-items: stretch;
 
     .ShogiPanel {
       background: #eff;
     }
 
-    .InfoTable {
+    .PvInfoTable {
       display: block;
       overflow-y: scroll;
+      background: #eee;
     }
 
-    .InfoTbody {
+    .PvInfoTbody {
       display: table;
       width: 100%;
 
       tr {
-        height: 5vh;
+        height: $hh;
         white-space: nowrap;
       }
 
       th {
-        background: #eee;
+        background: #ccc;
         text-align: left;
       }
 
@@ -300,13 +301,17 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    font-size: 1.5rem;
+    font-size: 2rem;
     color: #fff;
     text-shadow:
-      1px 1px 0 #000,
-      1px -1px 0 #000,
+      -1px -1px 0 #000,
+      -1px 0px 0 #000,
       -1px 1px 0 #000,
-      -1px -1px 0 #000;
+      0px -1px 0 #000,
+      0px 1px 0 #000,
+      1px -1px 0 #000,
+      1px 0px 0 #000,
+      1px 1px 0 #000,
   }
 
   .BrowseView {
