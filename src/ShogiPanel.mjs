@@ -4,6 +4,7 @@ import { on } from './browser.mjs';
 import {
   colInfos,
   colN,
+  formatGameUsiFromLastStep,
   getCol,
   getMoveFrom,
   getMoveTo,
@@ -16,9 +17,13 @@ import {
   handOrderMap,
   isKindPromoted,
   isMoveDropped,
+  isMovePromoted,
   kindNames,
+  makeDrop,
+  makeMove,
   makePiece,
   makeSquare,
+  parseMoveUsi,
   rowInfos,
   rowN,
   sideInfos,
@@ -27,7 +32,8 @@ import {
 } from './shogi.mjs';
 
 export default class ShogiPanel {
-  constructor(el, handler) {
+  constructor(app, el, handler) {
+    this.app = app;
     this.el = el;
     this.handler = handler;
     this.squareW = 100;
@@ -100,19 +106,22 @@ export default class ShogiPanel {
   }
 
   onPoinerDown(pointer) {
+    if (!this.handler.onPointerBefore?.(pointer)) {
+      return;
+    }
     const canvasRect = this.el.getBoundingClientRect();
     const i = this.inversion ? -1 : 1;
     const x = (i * ((pointer.clientX - canvasRect.left) * devicePixelRatio - this.matrix[4])) / this.matrix[0];
     const y = (i * ((pointer.clientY - canvasRect.top) * devicePixelRatio - this.matrix[5])) / this.matrix[3];
     if (this.rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
-      this.handler.onSquare(
+      this.doSquare(
         makeSquare(Math.floor((x - this.boardX) / this.squareW), Math.floor((y - this.boardY) / this.squareH))
       );
     } else {
       for (let side = 0; side < sideN; side++) {
         const [hx, hy, hw, hh] = this.handRects[side];
         if (this.rectContains(hx, hy, hw, hh, x, y)) {
-          this.handler.onHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)]);
+          this.doHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)]);
         }
       }
     }
@@ -120,6 +129,81 @@ export default class ShogiPanel {
 
   rectContains(rx, ry, rw, rh, px, py) {
     return px >= rx && px < rx + rw && py >= ry && py < ry + rh;
+  }
+
+  async doSquare(sq) {
+    if (this.nextToMap?.has(sq)) {
+      const nextFrom = getMoveFrom(this.nextMove);
+      if (isMoveDropped(this.nextMove)) {
+        await this.doStep(this.step.appendMove(makeDrop(nextFrom, sq)));
+      } else {
+        let promoted = this.nextToMap.get(sq) - 1;
+        if (promoted === 2) {
+          promoted = await this.app.confirmView.show('成りますか?', ['成らない', '成る']);
+        }
+        await this.doStep(this.step.appendMove(makeMove(nextFrom, sq, promoted)));
+      }
+    } else if (this.nextMove && !isMoveDropped(this.nextMove) && getMoveFrom(this.nextMove) === sq) {
+      this.resetNext();
+    } else {
+      const piece = this.step.position.getPiece(sq);
+      if (piece) {
+        if (getPieceSide(piece) === this.step.position.sideToMove) {
+          this.nextMove = makeMove(sq, squareN);
+          this.nextToMap = (await this.getFromToMap()).get(this.nextMove);
+        }
+      }
+    }
+    this.request();
+  }
+
+  async doHand(side, base) {
+    if (side !== this.step.position.sideToMove) {
+      return;
+    }
+    if (!this.step.position.getHandCount(side, base)) {
+      return;
+    }
+    if (this.nextMove && isMoveDropped(this.nextMove) && getMoveFrom(this.nextMove) === base) {
+      this.resetNext();
+    } else {
+      this.nextMove = makeDrop(base, squareN);
+      this.nextToMap = (await this.getFromToMap()).get(this.nextMove);
+    }
+    this.request();
+  }
+
+  async getFromToMap() {
+    if (!this.fromToMap) {
+      this.fromToMap = new Map();
+      for (const moveUsi of await this.app.engine.moves(formatGameUsiFromLastStep(this.step), this.checksOnly)) {
+        const move = parseMoveUsi(moveUsi);
+        if (move) {
+          const from = getMoveFrom(move);
+          const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
+          let toMap = this.fromToMap.get(key);
+          if (!toMap) {
+            toMap = new Map();
+            this.fromToMap.set(key, toMap);
+          }
+          const to = getMoveTo(move);
+          toMap.set(to, (toMap.get(to) || 0) | (isMovePromoted(move) ? 2 : 1));
+        }
+      }
+    }
+    return this.fromToMap;
+  }
+
+  doStep(step) {
+    this.changeStep(step);
+    this.handler.onStepAfter?.(step);
+  }
+
+  changeStep(step) {
+    this.step = step;
+    this.resetNext();
+    this.fromToMap = null;
+    this.bestMove = 0;
   }
 
   resetNext() {
@@ -153,9 +237,12 @@ export default class ShogiPanel {
     }
 
     const nextSide = this.step.position.sideToMove;
+    this.pieceStyle = this.app.getPieceStyle();
+    this.pieceTitleSet = this.app.getPieceTitleSet();
     const filterColors = this.pieceStyle?.filterColors || ['#6666', '#6666'];
     context.fillStyle = filterColors[nextSide];
     context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
+
     if (this.nextMove) {
       context.fillStyle = filterColors[nextSide];
       const nextMoveFrom = getMoveFrom(this.nextMove);

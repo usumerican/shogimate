@@ -24,7 +24,7 @@ export default class BrowseView {
       </div>
     `);
     this.titleOutput = this.el.querySelector('.TitleOutput');
-    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'));
+    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'));
     this.stepSelect = this.el.querySelector('.StepSelect');
     this.stepPrevButton = this.el.querySelector('.StepPrevButton');
     this.stepNextButton = this.el.querySelector('.StepNextButton');
@@ -58,8 +58,6 @@ export default class BrowseView {
     this.titleOutput.textContent = title;
     this.shogiPanel.inversion = parentPanel.inversion;
     this.shogiPanel.sideNames = parentPanel.sideNames;
-    this.shogiPanel.pieceStyle = parentPanel.pieceStyle;
-    this.shogiPanel.pieceTitleSet = parentPanel.pieceTitleSet;
     this.steps = [];
     const currStep = new Step(step);
     let st = currStep;
@@ -99,7 +97,7 @@ export default class BrowseView {
     this.stepSelect.selectedIndex = this.stepIndex;
     this.stepPrevButton.disabled = !this.canStepPrev();
     this.stepNextButton.disabled = !this.canStepNext();
-    this.shogiPanel.step = this.steps[this.stepIndex];
+    this.shogiPanel.changeStep(this.steps[this.stepIndex]);
     this.shogiPanel.request();
   }
 

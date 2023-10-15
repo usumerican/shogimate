@@ -4,7 +4,7 @@ import BrowseView from './BrowseView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { Step, formatGameUsiFromLastStep, formatStep, parseInfoUsi, parseMoveUsi } from './shogi.mjs';
+import { Step, formatGameUsiFromLastStep, formatStep, parsePvInfoUsi, parseMoveUsi } from './shogi.mjs';
 
 export default class ResearchView {
   constructor(app) {
@@ -16,10 +16,8 @@ export default class ResearchView {
           <div class="Center">検討</div>
         </div>
         <canvas class="ShogiPanel"></canvas>
-        <table class="InfoTable">
-          <tbody class="InfoTbody"></tbody>
-        </table>
         <div class="ToolBar">
+          <button class="StepPrevButton">前手</button>
           <select class="MpvSelect">
             <option value="1">1位のみ</option>
             <option value="2">2位まで</option>
@@ -34,13 +32,16 @@ export default class ResearchView {
             <option value="4000">4秒</option>
             <option value="5000">5秒</option>
           </select>
-          <button class="StartButton">再検討</button>
+          <button class="ResearchButton">再検討</button>
         </div>
+        <table class="PvInfoTable">
+          <tbody class="PvInfoTbody"></tbody>
+        </table>
       </div>
     `);
-    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'));
-    this.infoTable = this.el.querySelector('.InfoTable');
-    this.infoTbody = this.el.querySelector('.InfoTbody');
+    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
+    this.pvInfoTable = this.el.querySelector('.PvInfoTable');
+    this.pvInfoTbody = this.el.querySelector('.PvInfoTbody');
     this.timeSelect = this.el.querySelector('.TimeSelect');
     this.mpvSelect = this.el.querySelector('.MpvSelect');
 
@@ -48,7 +49,13 @@ export default class ResearchView {
       this.hide();
     });
 
-    on(this.el.querySelector('.StartButton'), 'click', () => {
+    on(this.el.querySelector('.StepPrevButton'), 'click', () => {
+      if (this.step.parent) {
+        this.changeStep(this.step.parent);
+      }
+    });
+
+    on(this.el.querySelector('.ResearchButton'), 'click', () => {
       const time = +this.timeSelect.value;
       const mpv = +this.mpvSelect.value;
       this.app.setState(['research', 'time'], time);
@@ -58,42 +65,47 @@ export default class ResearchView {
     });
   }
 
-  show(parentPanel) {
-    this.step = new Step(parentPanel.step);
-    this.shogiPanel.step = this.step;
+  async show(parentPanel) {
     this.shogiPanel.inversion = parentPanel.inversion;
     this.shogiPanel.sideNames = parentPanel.sideNames;
-    this.shogiPanel.pieceStyle = parentPanel.pieceStyle;
-    this.shogiPanel.pieceTitleSet = parentPanel.pieceTitleSet;
     setSelectValue(this.timeSelect, this.app.getState(['research', 'time']));
     setSelectValue(this.mpvSelect, this.app.getState(['research', 'mpv']));
+    this.changeStep(new Step(parentPanel.step));
     this.app.pushView(this);
-    this.doResearch();
+    await this.doResearch();
   }
 
   hide() {
     this.app.popView();
   }
 
+  onPointerBefore() {
+    return !this.step.endName;
+  }
+
+  async onStepAfter(step) {
+    this.changeStep(step);
+    await this.doResearch();
+  }
+
   async doResearch(time = 1000, mpv = 1) {
     const progressView = new ProgressView(this.app);
     progressView.show();
-    this.shogiPanel.bestMove = 0;
-    this.shogiPanel.request();
-    this.infoTbody.innerHTML = '';
+    const step = this.step;
+    step.data = {};
     const headerRow = parseHtml(`
-    <tr class="InfoRow">
-      <th>順位</th>
-      <th>評価値</th>
-      <th>深さ</th>
-      <th class="InfoOutput"></th>
-    </tr>
-  `);
-    const infoOutput = headerRow.querySelector('.InfoOutput');
-    this.infoRows = [headerRow];
+      <tr class="PvInfoRow">
+        <th>位</th>
+        <th>評価値</th>
+        <th>深さ</th>
+        <th class="SummaryOutput"></th>
+      </tr>
+    `);
+    const summaryOutput = headerRow.querySelector('.SummaryOutput');
+    const rows = (step.data.pvInfoRows = [headerRow]);
     for (let i = 0; i < mpv; i++) {
       const row = parseHtml(`
-        <tr class="InfoRow">
+        <tr class="PvInfoRow">
           <td>${i + 1}</td>
           <td class="ScoreOutput"></td>
           <td class="DepthOutput"></td>
@@ -104,23 +116,22 @@ export default class ResearchView {
       row.depthOutput = row.querySelector('.DepthOutput');
       row.pvOutput = row.querySelector('.PvOutput');
       on(row, 'click', () => {
-        new BrowseView(this.app).show('読み筋', this.shogiPanel, this.step, row.moveUsis, 1);
+        new BrowseView(this.app).show('読み筋', this.shogiPanel, step, row.moveUsis, 1);
       });
-      this.infoRows.push(row);
+      rows.push(row);
     }
-    this.infoTbody.replaceChildren(...this.infoRows);
-    await this.app.engine.research(formatGameUsiFromLastStep(this.step), time, mpv, (line) => {
+    await this.app.engine.research(formatGameUsiFromLastStep(step), time, mpv, (line) => {
       console.log(line);
-      const infoMap = parseInfoUsi(line);
-      if (infoMap) {
-        infoOutput.textContent =
-          (infoMap.get('time')?.[0] / 1000).toFixed(1) + '秒 ' + (+infoMap.get('nodes')?.[0]).toLocaleString() + '面 ';
-        const row = this.infoRows[infoMap.get('multipv')?.[0] || 1];
-        row.scoreOutput.textContent = infoMap.get('score')?.join(' ');
-        row.depthOutput.textContent = infoMap.get('depth')?.[0] + '/' + infoMap.get('seldepth')?.[0];
-        row.moveUsis = infoMap.get('pv') || [];
+      const pvInfo = parsePvInfoUsi(line);
+      if (pvInfo) {
+        summaryOutput.textContent =
+          (pvInfo.get('time')?.[0] / 1000).toFixed(1) + '秒 ' + (+pvInfo.get('nodes')?.[0]).toLocaleString() + '面 ';
+        const row = rows[pvInfo.get('multipv')?.[0] || 1];
+        row.scoreOutput.textContent = pvInfo.get('score')?.join(' ');
+        row.depthOutput.textContent = pvInfo.get('depth')?.[0] + '/' + pvInfo.get('seldepth')?.[0];
+        row.moveUsis = pvInfo.get('pv') || [];
         const names = [];
-        let st = new Step(this.step);
+        let st = new Step(step);
         for (const moveUsi of row.moveUsis) {
           st = st.appendMoveUsi(moveUsi);
           names.push(formatStep(st));
@@ -128,11 +139,29 @@ export default class ResearchView {
         row.pvOutput.textContent = row.pvOutput.title = names.join(' ');
       }
     });
-    const bestMoveUsi = this.infoRows[1]?.moveUsis[0];
+    const bestMoveUsi = rows[1]?.moveUsis[0];
     if (bestMoveUsi) {
-      this.shogiPanel.bestMove = parseMoveUsi(bestMoveUsi);
-      this.shogiPanel.request();
+      step.data.bestMove = parseMoveUsi(bestMoveUsi);
     }
+
+    this.updateStep();
     progressView.hide();
+  }
+
+  changeStep(step) {
+    this.step = step;
+    this.shogiPanel.changeStep(this.step);
+    this.updateStep();
+  }
+
+  updateStep() {
+    if (this.step.data?.pvInfoRows) {
+      this.pvInfoTbody.replaceChildren(...this.step.data.pvInfoRows);
+      this.shogiPanel.bestMove = this.step.data.bestMove;
+    } else {
+      this.pvInfoTbody.replaceChildren();
+      this.shogiPanel.bestMove = 0;
+    }
+    this.shogiPanel.request();
   }
 }
