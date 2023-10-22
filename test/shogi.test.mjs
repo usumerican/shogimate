@@ -6,6 +6,7 @@ import {
   parseGameUsi,
   parsePvInfoUsi,
   parseMoveUsi,
+  formatPvScore,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -43,12 +44,31 @@ describe('shogi', () => {
   });
 
   test('parsePvInfoUsi', () => {
-    const infoMap = parsePvInfoUsi(
+    const pvInfo = parsePvInfoUsi(
       'info depth 8 seldepth 4 score mate 3 nodes 1322 nps 47214 time 28 pv B*3g 5i5h S*4i'
     );
-    expect(infoMap.get('depth')).toEqual(['8']);
-    expect(infoMap.get('score')).toEqual(['mate', '3']);
-    expect(infoMap.get('pv')).toEqual(['B*3g', '5i5h', 'S*4i']);
+    expect(pvInfo.depth).toEqual(['8']);
+    expect(pvInfo.score).toEqual(['mate', '3']);
+    expect(pvInfo.pv).toEqual(['B*3g', '5i5h', 'S*4i']);
+  });
+
+  test('formatPvScore', () => {
+    expect(formatPvScore(['cp', '100'], 0)).toEqual('☗100');
+    expect(formatPvScore(['cp', '-100'], 0)).toEqual('☖100');
+    expect(formatPvScore(['cp', '100'], 1)).toEqual('☖100');
+    expect(formatPvScore(['cp', '-100'], 1)).toEqual('☗100');
+    expect(formatPvScore(['cp', '0'], 0)).toEqual('☗0');
+    expect(formatPvScore(['cp', '-0'], 0)).toEqual('☖0');
+    expect(formatPvScore(['cp', '0'], 1)).toEqual('☖0');
+    expect(formatPvScore(['cp', '-0'], 1)).toEqual('☗0');
+    expect(formatPvScore(['mate', '3'], 0)).toEqual('☗3手詰');
+    expect(formatPvScore(['mate', '-3'], 0)).toEqual('☖3手詰');
+    expect(formatPvScore(['mate', '3'], 1)).toEqual('☖3手詰');
+    expect(formatPvScore(['mate', '-3'], 1)).toEqual('☗3手詰');
+    expect(formatPvScore(['mate', '0'], 0)).toEqual('☗0手詰');
+    expect(formatPvScore(['mate', '-0'], 0)).toEqual('☖0手詰');
+    expect(formatPvScore(['mate', '0'], 1)).toEqual('☖0手詰');
+    expect(formatPvScore(['mate', '-0'], 1)).toEqual('☗0手詰');
   });
 
   test('formatGameUsiFromLastStep', () => {

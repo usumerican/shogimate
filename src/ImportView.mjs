@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import ConfirmView from './ConfirmView.mjs';
 import { on, parseHtml } from './browser.mjs';
 import { formatGameUsi, parseGameUsi } from './shogi.mjs';
 
@@ -49,7 +50,7 @@ export default class ImportView {
           if (game) {
             records.push(this.formatRecord(game));
           } else {
-            await this.app.confirmView.show(`書式エラー: ${i + 1}行目`, ['OK']);
+            await new ConfirmView(this.app).show(`書式エラー: ${i + 1}行目`, ['OK']);
             return;
           }
         }
@@ -65,7 +66,7 @@ export default class ImportView {
           }
         }
         this.app.saveCollection();
-        await this.app.confirmView.show(
+        await new ConfirmView(this.app).show(
           `${records.length - skipCount}件読み込みました。` + (skipCount ? `(登録済: ${skipCount}件)` : ''),
           ['OK']
         );

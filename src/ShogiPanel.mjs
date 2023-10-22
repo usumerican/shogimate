@@ -1,5 +1,6 @@
 /* eslint-env browser */
 
+import ConfirmView from './ConfirmView.mjs';
 import { on } from './browser.mjs';
 import {
   colInfos,
@@ -81,8 +82,6 @@ export default class ShogiPanel {
     this.addrFont = ~~(this.squareW * 0.3) + 'px sans-serif';
     this.matrix = [1, 0, 0, 1, 0, 0];
     this.lastFrameTime = 0;
-    this.inversion = 0;
-    this.sideNames = ['', ''];
     this.clocks = ['', ''];
 
     new ResizeObserver(() => {
@@ -110,7 +109,7 @@ export default class ShogiPanel {
       return;
     }
     const canvasRect = this.el.getBoundingClientRect();
-    const i = this.inversion ? -1 : 1;
+    const i = this.game.inversion ? -1 : 1;
     const x = (i * ((pointer.clientX - canvasRect.left) * devicePixelRatio - this.matrix[4])) / this.matrix[0];
     const y = (i * ((pointer.clientY - canvasRect.top) * devicePixelRatio - this.matrix[5])) / this.matrix[3];
     if (this.rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
@@ -139,7 +138,7 @@ export default class ShogiPanel {
       } else {
         let promoted = this.nextToMap.get(sq) - 1;
         if (promoted === 2) {
-          promoted = await this.app.confirmView.show('成りますか?', ['成らない', '成る']);
+          promoted = await new ConfirmView(this.app).show('成りますか?', ['成らない', '成る']);
         }
         await this.doStep(this.step.appendMove(makeMove(nextFrom, sq, promoted)));
       }
@@ -220,7 +219,7 @@ export default class ShogiPanel {
         try {
           context.clearRect(0, 0, this.el.width, this.el.height);
           context.setTransform(...this.matrix);
-          if (this.inversion) {
+          if (this.game.inversion) {
             context.transform(-1, 0, 0, -1, 0, 0);
           }
           this.render(context);
@@ -290,14 +289,14 @@ export default class ShogiPanel {
     for (let col = 0; col < colN; col++) {
       const name = colInfos[col].name;
       const x = this.boardX + this.squareW * (0.5 + col);
-      this.renderText(context, name, x, this.boardY - this.squareH * 0.2, this.inversion);
-      this.renderText(context, name, x, this.boardY + this.boardH + this.squareH * 0.2, this.inversion);
+      this.renderText(context, name, x, this.boardY - this.squareH * 0.2, this.game.inversion);
+      this.renderText(context, name, x, this.boardY + this.boardH + this.squareH * 0.2, this.game.inversion);
     }
     for (let row = 0; row < rowN; row++) {
       const name = rowInfos[row].name;
       const y = this.boardY + this.squareH * (0.5 + row);
-      this.renderText(context, name, this.boardX - this.squareW * 0.2, y, this.inversion);
-      this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.inversion);
+      this.renderText(context, name, this.boardX - this.squareW * 0.2, y, this.game.inversion);
+      this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.game.inversion);
     }
 
     context.lineWidth = 4;
@@ -311,12 +310,12 @@ export default class ShogiPanel {
       context.font = this.countFont;
       this.renderText(
         context,
-        this.sideNames[side],
+        this.game.sideNames[side],
         sx + this.squareW / 2,
         sy + this.squareH * (side ? -0.25 : 1.25),
-        this.inversion
+        this.game.inversion
       );
-      this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.inversion);
+      this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.inversion);
     }
 
     for (const sq of [30, 33, 57, 60]) {
@@ -382,7 +381,7 @@ export default class ShogiPanel {
       if (count > 1) {
         context.font = this.countFont;
         context.fillStyle = '#000';
-        this.renderText(context, count, 0, this.squareH * 0.75, this.inversion ^ side);
+        this.renderText(context, count, 0, this.squareH * 0.75, this.game.inversion ^ side);
       }
 
       const { ax, ay, bx, by, font } = this.baseShapes[getPieceBase(kind)];
@@ -422,13 +421,15 @@ export default class ShogiPanel {
   }
 
   renderText(context, text, x, y, inversion) {
-    context.save();
-    try {
-      const cos = inversion ? -1 : 1;
-      context.transform(cos, 0, 0, cos, x, y);
-      context.fillText(text, 0, 0);
-    } finally {
-      context.restore();
+    if (text) {
+      context.save();
+      try {
+        const cos = inversion ? -1 : 1;
+        context.transform(cos, 0, 0, cos, x, y);
+        context.fillText(text, 0, 0);
+      } finally {
+        context.restore();
+      }
     }
   }
 

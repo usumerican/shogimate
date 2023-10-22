@@ -117,11 +117,11 @@ export const pieceInfos = kindInfos.reduce((arr, info, kind) => {
   }
   return arr;
 }, []);
-export const usiPieceMap = arrayToMap(pieceInfos.map((info) => info.usi));
+export const usiPieceMap = pieceInfos.reduce((map, info, piece) => (map.set(info.usi, piece), map), new Map());
 
 export const handBaseN = 7;
 export const handBases = [ROOK, BISHOP, GOLD, SILVER, KNIGHT, LANCE, PAWN];
-export const handOrderMap = arrayToMap(handBases);
+export const handOrderMap = handBases.reduce((map, base, order) => (map.set(base, order), map), new Map());
 
 export const moveToMask = 0x7f;
 export const movePromotedMask = 1 << 7;
@@ -271,8 +271,7 @@ export class Step {
   }
 
   appendEnd(endName) {
-    const step = new Step(this);
-    step.endName = endName;
+    const step = new Step({ parent: this, position: this.position, endName });
     this.children.push(step);
     return step;
   }
@@ -287,11 +286,11 @@ export class Step {
 }
 
 export function formatStep(step) {
+  if (step.endName) {
+    return sideInfos[step.position.sideToMove].char + step.endName;
+  }
   if (!step.parent) {
     return '開始局面';
-  }
-  if (step.endName) {
-    return step.endName;
   }
   const to = getMoveTo(step.move);
   const prefix = sideInfos[step.position.sideToMove ^ 1].char + colInfos[getCol(to)].name + rowInfos[getRow(to)].name;
@@ -309,9 +308,30 @@ export function formatStep(step) {
 
 export const defaultSfen = 'lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1';
 
+export const startInfos = [
+  { name: '平手', sfen: defaultSfen },
+  { name: '香落ち', sfen: 'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '右香落ち', sfen: '1nsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '角落ち', sfen: 'lnsgkgsnl/1r7/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '飛車落ち', sfen: 'lnsgkgsnl/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '飛香落ち', sfen: 'lnsgkgsn1/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '二枚落ち', sfen: 'lnsgkgsnl/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '三枚落ち', sfen: 'lnsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '四枚落ち', sfen: '1nsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '五枚落ち', sfen: '2sgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '左五枚落ち', sfen: '1nsgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '六枚落ち', sfen: '2sgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '左七枚落ち', sfen: '2sgkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '右七枚落ち', sfen: '3gkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '八枚落ち', sfen: '3gkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: '十枚落ち', sfen: '4k4/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+];
+
 export class Game {
-  constructor({ startStep } = {}) {
+  constructor({ startStep, inversion, sideNames } = {}) {
     this.startStep = startStep;
+    this.inversion = inversion || 0;
+    this.sideNames = sideNames ? sideNames.slice(0) : ['', ''];
   }
 }
 
@@ -451,21 +471,38 @@ export function parsePvInfoUsi(pvInfoUsi) {
   if (words[0] !== 'info') {
     return null;
   }
-  const pvInfo = new Map();
+  const pvInfo = {};
   for (let i = 1, key; i < words.length; i++) {
     const word = words[i];
     if (pvInfoKeySet.has(word)) {
-      pvInfo.set(word, []);
+      pvInfo[word] = [];
       key = word;
       continue;
     }
     if (key) {
-      pvInfo.get(key).push(word);
+      pvInfo[key].push(word);
     }
   }
   return pvInfo;
 }
 
-function arrayToMap(arr, map = new Map()) {
-  return arr.reduce((m, v, i) => (m.set(v, i), m), map);
+export function formatPvScore(pvScore, sideToMove) {
+  if (!pvScore) {
+    return '';
+  }
+  return (
+    sideInfos[pvScore[1][0] === '-' ? sideToMove ^ 1 : sideToMove].char +
+    Math.abs(+pvScore[1]) +
+    (pvScore[0] === 'mate' ? '手詰' : '')
+  );
+}
+
+export function formatPvMoveUsis(step, pvMoveUsis) {
+  const names = [];
+  let st = new Step(step);
+  for (const moveUsi of pvMoveUsis) {
+    st = st.appendMoveUsi(moveUsi);
+    names.push(formatStep(st));
+  }
+  return names;
 }

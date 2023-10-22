@@ -1,13 +1,7 @@
 /* eslint-env browser */
 
-import CollectionView from './CollectionView.mjs';
 import ConfirmView from './ConfirmView.mjs';
-import ExportView from './ExportView.mjs';
 import HomeView from './HomeView.mjs';
-import ImportView from './ImportView.mjs';
-import MenuView from './MenuView.mjs';
-import QuestionView from './QuestionView.mjs';
-import SettingsView from './SettingsView.mjs';
 import { KING, makePiece } from './shogi.mjs';
 
 export default class App {
@@ -144,13 +138,6 @@ export default class App {
       return bookMap;
     }, new Map());
     this.viewStack = [];
-    this.confirmView = new ConfirmView(this);
-    this.menuView = new MenuView(this);
-    this.questionView = new QuestionView(this);
-    this.collectionView = new CollectionView(this);
-    this.importView = new ImportView(this);
-    this.exportView = new ExportView(this);
-    this.settingsView = new SettingsView(this);
     new HomeView(this).show();
   }
 
@@ -221,7 +208,6 @@ export default class App {
 
   saveSettings() {
     this.saveItem('settings', this.settings);
-    this.pieceSoundData = null;
   }
 
   saveCollection() {
@@ -251,7 +237,7 @@ export default class App {
   async writeToClipboard(text) {
     await navigator.clipboard.writeText(text);
     console.log(text);
-    await this.confirmView.show('クリップボードにコピーしました。', ['OK']);
+    await new ConfirmView(this).show('クリップボードにコピーしました。', ['OK']);
   }
 
   async playSound(name, duration) {

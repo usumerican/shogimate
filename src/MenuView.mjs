@@ -6,7 +6,7 @@ export default class MenuView {
   constructor(app) {
     this.el = parseHtml(`
       <div class="MenuView">
-        <div class="MenuContent">
+        <div class="Content">
           <div class="MessageOutput Center"></div>
           <div class="ItemList"></div>
         </div>
@@ -16,7 +16,7 @@ export default class MenuView {
     this.messageOutput = this.el.querySelector('.MessageOutput');
     this.itemList = this.el.querySelector('.ItemList');
 
-    on(this.el.querySelector('.MenuContent'), 'click', () => {});
+    on(this.el.querySelector('.Content'), 'click', () => {});
 
     on(this.el, 'click', () => this.hide());
   }
