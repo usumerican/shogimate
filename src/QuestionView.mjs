@@ -1,8 +1,10 @@
 /* eslint-env browser */
 
 import BrowseView from './BrowseView.mjs';
+import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
+import SettingsView from './SettingsView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
 import {
@@ -60,7 +62,7 @@ export default class QuestionView {
 
     on(this.el.querySelector('.MenuButton'), 'click', async () => {
       switch (
-        await this.app.menuView.show('メニュー', [
+        await new MenuView(this.app).show('メニュー', [
           '盤面反転',
           '開始局面のコピー (SFEN)',
           '解答例のコピー (USI)',
@@ -68,8 +70,7 @@ export default class QuestionView {
         ])
       ) {
         case 0:
-          this.inversion ^= 1;
-          this.shogiPanel.inversion ^= 1;
+          this.game.inversion ^= 1;
           this.shogiPanel.request();
           break;
         case 1:
@@ -79,7 +80,7 @@ export default class QuestionView {
           this.app.writeToClipboard(formatGameUsi(this.game));
           break;
         case 3:
-          if (await this.app.settingsView.show()) {
+          if (await new SettingsView(this.app).show()) {
             this.shogiPanel.request();
           }
           break;
@@ -87,7 +88,7 @@ export default class QuestionView {
     });
 
     on(this.el.querySelector('.ResearchButton'), 'click', () => {
-      new ResearchView(this.app).show(this.shogiPanel);
+      new ResearchView(this.app).show(this.game, this.playStep);
     });
 
     on(this.collectButton, 'click', () => {
@@ -118,9 +119,7 @@ export default class QuestionView {
     on(this.answerButton, 'click', () => {
       if (this.limit) {
         this.stopClock();
-        new BrowseView(this.app).show('解答例', this.shogiPanel, this.startStep, this.answerMoveUsis, 1);
-      } else {
-        this.app.confirmView.show('解答例はありません。', ['OK']);
+        new BrowseView(this.app).show('解答例', this.game);
       }
     });
 
@@ -167,7 +166,6 @@ export default class QuestionView {
       this.changed = true;
     }
     this.recordSelect.replaceChildren(...options);
-    this.inversion = 0;
     this.updateRecord();
     this.app.pushView(this);
     this.app.playPieceSound(0);
@@ -206,8 +204,6 @@ export default class QuestionView {
   doRecordNext() {
     if (this.canRecordNext()) {
       this.changeRecord(this.recordOrder + 1);
-    } else {
-      this.app.confirmView.show('次問はありません。', ['OK']);
     }
   }
 
@@ -230,11 +226,12 @@ export default class QuestionView {
     this.game = parseGameUsi(gameUsi);
     this.startStep = new Step(this.game.startStep);
     this.startSfen = formatSfen(this.startStep.position);
-    this.startSide = this.startStep.position.sideToMove;
     this.startNumber = this.startStep.position.number;
-    this.shogiPanel.inversion = this.startSide ^ this.inversion;
-    this.shogiPanel.sideNames[this.startSide] = '攻方';
-    this.shogiPanel.sideNames[this.startSide ^ 1] = '受方';
+    this.startSide = this.startStep.position.sideToMove;
+    this.game.inversion = this.startSide;
+    this.game.sideNames[this.startSide] = '攻方';
+    this.game.sideNames[this.startSide ^ 1] = '受方';
+    this.shogiPanel.game = this.game;
     this.shogiPanel.clocks[this.startSide] = '';
     this.shogiPanel.clocks[this.startSide ^ 1] = '';
     this.answerMoveUsis = formatMoveUsis(this.startStep);
@@ -358,7 +355,6 @@ export default class QuestionView {
     this.playStep = this.playSteps[this.playIndex];
     this.playSide = this.playStep.position.sideToMove;
     this.playNumber = this.playStep.position.number - this.startNumber;
-    this.fromToMap = null;
     this.stepSelect.selectedIndex = this.playIndex;
     this.resetButton.disabled = !this.canPlayReset();
     this.undoButton.disabled = !this.canPlayReset();

@@ -1,5 +1,9 @@
 /* eslint-env browser */
 
+import CollectionView from './CollectionView.mjs';
+import MatchSettingsView from './MatchSettingsView.mjs';
+import QuestionView from './QuestionView.mjs';
+import SettingsView from './SettingsView.mjs';
 import { on, openUrl, parseHtml, setSelectValue } from './browser.mjs';
 
 export default class HomeView {
@@ -13,6 +17,7 @@ export default class HomeView {
         <button class="StartButton">始めから</button>
         <button class="ChallengeButton">チャレンジ</button>
         <button class="CollectionButton">コレクション</button>
+        <button class="MatchButton">AI 対局</button>
         <div class="ToolBar">
           <button class="InfoButton">ソース</button>
           <button class="SettingsButton">設定</button>
@@ -31,7 +36,7 @@ export default class HomeView {
     });
 
     on(this.el.querySelector('.SettingsButton'), 'click', async () => {
-      await this.app.settingsView.show();
+      await new SettingsView(this.app).show();
     });
 
     on(this.el.querySelector('.ReloadButton'), 'click', () => {
@@ -59,7 +64,11 @@ export default class HomeView {
     });
 
     on(this.el.querySelector('.CollectionButton'), 'click', () => {
-      this.app.collectionView.show();
+      new CollectionView(this.app).show();
+    });
+
+    on(this.el.querySelector('.MatchButton'), 'click', () => {
+      new MatchSettingsView(this.app).show();
     });
   }
 
@@ -75,7 +84,7 @@ export default class HomeView {
     const volume = book.volumeMap.get(this.volumeSelect.value);
     const records = await this.app.fetchRecords(book.name, volume.name);
     if (
-      await this.app.questionView.show(
+      await new QuestionView(this.app).show(
         records,
         mode > 0 ? this.app.getState(['bs', book.name, 'vs', volume.name, 'ro']) || 0 : mode,
         `${book.title} ${volume.title}`,

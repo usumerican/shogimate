@@ -1,5 +1,9 @@
 /* eslint-env browser */
 
+import ConfirmView from './ConfirmView.mjs';
+import ExportView from './ExportView.mjs';
+import ImportView from './ImportView.mjs';
+import QuestionView from './QuestionView.mjs';
 import { on, parseHtml } from './browser.mjs';
 
 export default class CollectionView {
@@ -54,7 +58,7 @@ export default class CollectionView {
       item.deleteButton = item.querySelector('.DeleteButton');
       on(item.deleteButton, 'click', async () => {
         if (item.records.length) {
-          if (await this.app.confirmView.show('削除しますか?', ['いいえ', 'はい'])) {
+          if (await new ConfirmView(this.app).show('削除しますか?', ['いいえ', 'はい'])) {
             for (const record of item.records) {
               this.app.collection.delete(record);
             }
@@ -81,7 +85,7 @@ export default class CollectionView {
     });
 
     on(this.el.querySelector('.ImportButton'), 'click', async () => {
-      if (await this.app.importView.show()) {
+      if (await new ImportView(this.app).show()) {
         this.updateCounts();
       }
     });
@@ -93,7 +97,7 @@ export default class CollectionView {
           records.push(...item.records);
         }
       }
-      this.app.exportView.show(records);
+      new ExportView(this.app).show(records);
     });
 
     on(this.startButton, 'click', () => {
@@ -106,7 +110,7 @@ export default class CollectionView {
   }
 
   show() {
-    const limitSet = new Set(this.app.getState(['collection', 'limits']));
+    const limitSet = new Set(this.app.settings.collection?.limits);
     for (const item of this.limitItems) {
       item.checkbox.checked = limitSet.has(item.limit);
     }
@@ -124,9 +128,9 @@ export default class CollectionView {
       }
     }
     if (records.length) {
-      this.app.setState(['collection', 'limits'], limits);
-      this.app.saveState();
-      await this.app.questionView.show(records, startRecordOrder, 'コレクション');
+      this.app.settings.collection = { limits };
+      this.app.saveSettings();
+      await new QuestionView(this.app).show(records, startRecordOrder, 'コレクション');
       this.updateCounts();
     }
   }

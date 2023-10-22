@@ -86,11 +86,13 @@ export default class ShogiEngine {
     );
   }
 
-  async bestmove(gameUsi, time) {
-    return (await this.think(gameUsi, time, { ConsiderationMode: false, MultiPV: 1 })).split(/\s+/)[1];
+  async bestmove(gameUsi, time, level) {
+    return (await this.think(gameUsi, time, { ConsiderationMode: false, MultiPV: 1, SkillLevel: level ?? 20 })).split(
+      /\s+/
+    )[1];
   }
 
   async research(gameUsi, time, mpv, callback) {
-    return await this.think(gameUsi, time, { ConsiderationMode: true, MultiPV: mpv }, callback);
+    return await this.think(gameUsi, time, { ConsiderationMode: true, MultiPV: mpv, SkillLevel: 20 }, callback);
   }
 }

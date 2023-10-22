@@ -4,7 +4,17 @@ import BrowseView from './BrowseView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { Step, formatGameUsiFromLastStep, formatStep, parsePvInfoUsi, parseMoveUsi } from './shogi.mjs';
+import {
+  Step,
+  formatGameUsiFromLastStep,
+  parsePvInfoUsi,
+  parseMoveUsi,
+  formatPvMoveUsis,
+  Game,
+  formatSfen,
+  parseGameUsi,
+  formatPvScore,
+} from './shogi.mjs';
 
 export default class ResearchView {
   constructor(app) {
@@ -58,19 +68,17 @@ export default class ResearchView {
     on(this.el.querySelector('.ResearchButton'), 'click', () => {
       const time = +this.timeSelect.value;
       const mpv = +this.mpvSelect.value;
-      this.app.setState(['research', 'time'], time);
-      this.app.setState(['research', 'mpv'], mpv);
-      this.app.saveState();
+      this.app.settings.research = { time, mpv };
+      this.app.saveSettings();
       this.doResearch(time, mpv);
     });
   }
 
-  async show(parentPanel) {
-    this.shogiPanel.inversion = parentPanel.inversion;
-    this.shogiPanel.sideNames = parentPanel.sideNames;
-    setSelectValue(this.timeSelect, this.app.getState(['research', 'time']));
-    setSelectValue(this.mpvSelect, this.app.getState(['research', 'mpv']));
-    this.changeStep(new Step(parentPanel.step));
+  async show(game, step) {
+    this.game = this.shogiPanel.game = game;
+    setSelectValue(this.timeSelect, this.app.settings.research?.time);
+    setSelectValue(this.mpvSelect, this.app.settings.research?.mpv);
+    this.changeStep(new Step(step));
     this.app.pushView(this);
     await this.doResearch();
   }
@@ -91,8 +99,8 @@ export default class ResearchView {
   async doResearch(time = 1000, mpv = 1) {
     const progressView = new ProgressView(this.app);
     progressView.show();
-    const step = this.step;
-    step.data = {};
+    const targetStep = this.step;
+    targetStep.data = {};
     const headerRow = parseHtml(`
       <tr class="PvInfoRow">
         <th>位</th>
@@ -102,7 +110,7 @@ export default class ResearchView {
       </tr>
     `);
     const summaryOutput = headerRow.querySelector('.SummaryOutput');
-    const rows = (step.data.pvInfoRows = [headerRow]);
+    const rows = (targetStep.data.pvInfoRows = [headerRow]);
     for (let i = 0; i < mpv; i++) {
       const row = parseHtml(`
         <tr class="PvInfoRow">
@@ -116,32 +124,31 @@ export default class ResearchView {
       row.depthOutput = row.querySelector('.DepthOutput');
       row.pvOutput = row.querySelector('.PvOutput');
       on(row, 'click', () => {
-        new BrowseView(this.app).show('読み筋', this.shogiPanel, step, row.moveUsis, 1);
+        const game = new Game(this.game);
+        let st = (game.startStep = parseGameUsi(formatSfen(targetStep.position)).startStep);
+        for (const moveUsi of row.moveUsis) {
+          st = st.appendMoveUsi(moveUsi);
+        }
+        new BrowseView(this.app).show('読み筋', game);
       });
       rows.push(row);
     }
-    await this.app.engine.research(formatGameUsiFromLastStep(step), time, mpv, (line) => {
+    await this.app.engine.research(formatGameUsiFromLastStep(targetStep), time, mpv, (line) => {
       console.log(line);
       const pvInfo = parsePvInfoUsi(line);
       if (pvInfo) {
         summaryOutput.textContent =
-          (pvInfo.get('time')?.[0] / 1000).toFixed(1) + '秒 ' + (+pvInfo.get('nodes')?.[0]).toLocaleString() + '面 ';
-        const row = rows[pvInfo.get('multipv')?.[0] || 1];
-        row.scoreOutput.textContent = pvInfo.get('score')?.join(' ');
-        row.depthOutput.textContent = pvInfo.get('depth')?.[0] + '/' + pvInfo.get('seldepth')?.[0];
-        row.moveUsis = pvInfo.get('pv') || [];
-        const names = [];
-        let st = new Step(step);
-        for (const moveUsi of row.moveUsis) {
-          st = st.appendMoveUsi(moveUsi);
-          names.push(formatStep(st));
-        }
-        row.pvOutput.textContent = row.pvOutput.title = names.join(' ');
+          (pvInfo.time?.[0] / 1000).toFixed(1) + '秒 ' + (+pvInfo.nodes?.[0]).toLocaleString() + '面 ';
+        const row = rows[pvInfo.multipv?.[0] || 1];
+        row.scoreOutput.textContent = formatPvScore(pvInfo.score, targetStep.position.sideToMove);
+        row.depthOutput.textContent = pvInfo.depth?.[0] + '/' + pvInfo.seldepth?.[0];
+        row.moveUsis = pvInfo.pv || [];
+        row.pvOutput.textContent = row.pvOutput.title = formatPvMoveUsis(targetStep, row.moveUsis).join(' ');
       }
     });
     const bestMoveUsi = rows[1]?.moveUsis[0];
     if (bestMoveUsi) {
-      step.data.bestMove = parseMoveUsi(bestMoveUsi);
+      targetStep.data.bestMove = parseMoveUsi(bestMoveUsi);
     }
 
     this.updateStep();

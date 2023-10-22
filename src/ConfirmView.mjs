@@ -6,7 +6,7 @@ export default class ConfirmView {
   constructor(app) {
     this.el = parseHtml(`
       <div class="ConfirmView">
-        <div class="ConfirmContent">
+        <div class="Content">
           <div class="MessageOutput Center"></div>
           <div class="ItemList"></div>
         </div>
