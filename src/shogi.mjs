@@ -326,6 +326,7 @@ export const startInfos = [
   { name: '八枚落ち', sfen: '3gkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
   { name: '十枚落ち', sfen: '4k4/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
 ];
+export const startNameSfenMap = startInfos.reduce((map, info) => (map.set(info.name, info.sfen), map), new Map());
 
 export class Game {
   constructor({ startStep, inversion, sideNames } = {}) {
@@ -486,14 +487,25 @@ export function parsePvInfoUsi(pvInfoUsi) {
   return pvInfo;
 }
 
-export function formatPvScore(pvScore, sideToMove) {
-  if (!pvScore) {
-    return '';
+const mateScoreValue = 32000;
+const superiorScoreValue = 31111;
+
+export function parsePvScore(pvScore, sideToMove) {
+  let value = Math.abs(pvScore[1]);
+  if (pvScore[0] === 'mate') {
+    value = mateScoreValue - value;
+  }
+  return (pvScore[1][0] === '-') ^ sideToMove ? -value : value;
+}
+
+export function formatPvScoreValue(pvScoreValue) {
+  const abs = Math.abs(pvScoreValue);
+  if (!abs) {
+    return '0';
   }
   return (
-    sideInfos[pvScore[1][0] === '-' ? sideToMove ^ 1 : sideToMove].char +
-    Math.abs(+pvScore[1]) +
-    (pvScore[0] === 'mate' ? '手詰' : '')
+    sideInfos[pvScoreValue > 0 ? 0 : 1].char +
+    (abs < superiorScoreValue ? abs : abs > superiorScoreValue ? mateScoreValue - abs + '手詰' : '優等局面')
   );
 }
 

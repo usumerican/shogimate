@@ -18,6 +18,6 @@ export default class ProgressView {
   }
 
   hide() {
-    this.app.popView();
+    this.app.popView(this);
   }
 }

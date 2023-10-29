@@ -1,6 +1,6 @@
 .shogimate {
-  $gap: 0.2vh;
-  $toolH: 7vh;
+  $gap: 2px;
+  $toolH: 6vh;
   $rowH: 4vh;
   $themeColor: #fd0;
   $borderColor: #999;
@@ -363,15 +363,27 @@
     .Content {
       background: $themeColor;
       width: 90%;
-      height: 80%;
+      height: 90%;
       padding: $gap;
       display: grid;
       gap: $gap;
-      grid-template-rows: $toolH 1fr $toolH $toolH;
+      grid-template-rows: $rowH 1fr $toolH $toolH $toolH;
       place-items: stretch;
 
       .ShogiPanel {
         background: #fff;
+      }
+
+      .PositionBar {
+        display: grid;
+        gap: $gap;
+        grid-template-columns: 1fr 2fr;
+
+        label {
+          display: flex;
+          gap: $gap;
+          place-items: center;
+        }
       }
     }
   }

@@ -34,7 +34,7 @@ export default class ConfirmView {
   }
 
   hide(value) {
-    this.app.popView();
+    this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
       this.resolve = null;

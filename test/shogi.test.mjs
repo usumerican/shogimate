@@ -6,7 +6,8 @@ import {
   parseGameUsi,
   parsePvInfoUsi,
   parseMoveUsi,
-  formatPvScore,
+  parsePvScore,
+  formatPvScoreValue,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -52,23 +53,39 @@ describe('shogi', () => {
     expect(pvInfo.pv).toEqual(['B*3g', '5i5h', 'S*4i']);
   });
 
-  test('formatPvScore', () => {
-    expect(formatPvScore(['cp', '100'], 0)).toEqual('☗100');
-    expect(formatPvScore(['cp', '-100'], 0)).toEqual('☖100');
-    expect(formatPvScore(['cp', '100'], 1)).toEqual('☖100');
-    expect(formatPvScore(['cp', '-100'], 1)).toEqual('☗100');
-    expect(formatPvScore(['cp', '0'], 0)).toEqual('☗0');
-    expect(formatPvScore(['cp', '-0'], 0)).toEqual('☖0');
-    expect(formatPvScore(['cp', '0'], 1)).toEqual('☖0');
-    expect(formatPvScore(['cp', '-0'], 1)).toEqual('☗0');
-    expect(formatPvScore(['mate', '3'], 0)).toEqual('☗3手詰');
-    expect(formatPvScore(['mate', '-3'], 0)).toEqual('☖3手詰');
-    expect(formatPvScore(['mate', '3'], 1)).toEqual('☖3手詰');
-    expect(formatPvScore(['mate', '-3'], 1)).toEqual('☗3手詰');
-    expect(formatPvScore(['mate', '0'], 0)).toEqual('☗0手詰');
-    expect(formatPvScore(['mate', '-0'], 0)).toEqual('☖0手詰');
-    expect(formatPvScore(['mate', '0'], 1)).toEqual('☖0手詰');
-    expect(formatPvScore(['mate', '-0'], 1)).toEqual('☗0手詰');
+  test('parsePvScore', () => {
+    expect(parsePvScore(['cp', '1'], 0)).toEqual(1);
+    expect(parsePvScore(['cp', '-1'], 0)).toEqual(-1);
+    expect(parsePvScore(['cp', '1'], 1)).toEqual(-1);
+    expect(parsePvScore(['cp', '-1'], 1)).toEqual(1);
+
+    expect(parsePvScore(['cp', '0'], 0)).toEqual(0);
+    expect(parsePvScore(['cp', '-0'], 0)).toEqual(-0);
+    expect(parsePvScore(['cp', '0'], 1)).toEqual(-0);
+    expect(parsePvScore(['cp', '-0'], 1)).toEqual(0);
+
+    expect(parsePvScore(['mate', '1'], 0)).toEqual(31999);
+    expect(parsePvScore(['mate', '-1'], 0)).toEqual(-31999);
+    expect(parsePvScore(['mate', '1'], 1)).toEqual(-31999);
+    expect(parsePvScore(['mate', '-1'], 1)).toEqual(31999);
+
+    expect(parsePvScore(['mate', '0'], 0)).toEqual(32000);
+    expect(parsePvScore(['mate', '-0'], 0)).toEqual(-32000);
+    expect(parsePvScore(['mate', '0'], 1)).toEqual(-32000);
+    expect(parsePvScore(['mate', '-0'], 1)).toEqual(32000);
+  });
+
+  test('formatPvScoreValue', () => {
+    expect(formatPvScoreValue(1)).toEqual('☗1');
+    expect(formatPvScoreValue(-1)).toEqual('☖1');
+    expect(formatPvScoreValue(0)).toEqual('0');
+    expect(formatPvScoreValue(-0)).toEqual('0');
+    expect(formatPvScoreValue(31999)).toEqual('☗1手詰');
+    expect(formatPvScoreValue(-31999)).toEqual('☖1手詰');
+    expect(formatPvScoreValue(32000)).toEqual('☗0手詰');
+    expect(formatPvScoreValue(-32000)).toEqual('☖0手詰');
+    expect(formatPvScoreValue(31111)).toEqual('☗優等局面');
+    expect(formatPvScoreValue(-31111)).toEqual('☖優等局面');
   });
 
   test('formatGameUsiFromLastStep', () => {

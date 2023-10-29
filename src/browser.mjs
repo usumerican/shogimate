@@ -58,6 +58,11 @@ export function onLongPress(target, listener, startTime = 500, repeatTime = 100)
   on(target, 'contextmenu', () => {});
 }
 
+export function setTextareaValue(target, text) {
+  target.value = text;
+  target.scrollTop = 0;
+}
+
 export function setSelectValue(target, value, defaultValue) {
   const v = value ?? defaultValue ?? null;
   if (v !== null) {

@@ -21,27 +21,24 @@ export default class MenuView {
     on(this.el, 'click', () => this.hide());
   }
 
-  show(message, texts) {
+  show(message, items) {
     this.messageOutput.textContent = message;
     this.itemList.replaceChildren(
-      ...texts.map((t, i) => {
+      ...items.map((item) => {
         const button = document.createElement('button');
-        button.textContent = t;
-        on(button, 'click', () => this.hide(i));
+        button.textContent = item.title;
+        button.disabled = item.disabled;
+        on(button, 'click', () => {
+          item.callback();
+          this.hide();
+        });
         return button;
       })
     );
     this.app.pushView(this);
-    return new Promise((resolve) => {
-      this.resolve = resolve;
-    });
   }
 
-  hide(value) {
-    this.app.popView();
-    if (this.resolve) {
-      this.resolve(value);
-      this.resolve = null;
-    }
+  hide() {
+    this.app.popView(this);
   }
 }

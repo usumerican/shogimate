@@ -1,6 +1,7 @@
 /* eslint-env browser */
 
 import BrowseView from './BrowseView.mjs';
+import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
@@ -13,7 +14,8 @@ import {
   Game,
   formatSfen,
   parseGameUsi,
-  formatPvScore,
+  parsePvScore,
+  formatPvScoreValue,
 } from './shogi.mjs';
 
 export default class ResearchView {
@@ -24,6 +26,7 @@ export default class ResearchView {
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
           <div class="Center">検討</div>
+          <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
         <div class="ToolBar">
@@ -59,6 +62,10 @@ export default class ResearchView {
       this.hide();
     });
 
+    on(this.el.querySelector('.MenuButton'), 'click', () => {
+      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
+    });
+
     on(this.el.querySelector('.StepPrevButton'), 'click', () => {
       if (this.step.parent) {
         this.changeStep(this.step.parent);
@@ -84,7 +91,7 @@ export default class ResearchView {
   }
 
   hide() {
-    this.app.popView();
+    this.app.popView(this);
   }
 
   onPointerBefore() {
@@ -92,6 +99,7 @@ export default class ResearchView {
   }
 
   async onStepAfter(step) {
+    this.app.playPieceSound();
     this.changeStep(step);
     await this.doResearch();
   }
@@ -100,6 +108,8 @@ export default class ResearchView {
     const progressView = new ProgressView(this.app);
     progressView.show();
     const targetStep = this.step;
+    targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
+    targetStep.fromToMap = await this.app.engine.getFromToMap(targetStep.gameUsi);
     targetStep.data = {};
     const headerRow = parseHtml(`
       <tr class="PvInfoRow">
@@ -133,14 +143,14 @@ export default class ResearchView {
       });
       rows.push(row);
     }
-    await this.app.engine.research(formatGameUsiFromLastStep(targetStep), time, mpv, (line) => {
+    await this.app.engine.research(targetStep.gameUsi, time, mpv, (line) => {
       console.log(line);
       const pvInfo = parsePvInfoUsi(line);
       if (pvInfo) {
         summaryOutput.textContent =
           (pvInfo.time?.[0] / 1000).toFixed(1) + '秒 ' + (+pvInfo.nodes?.[0]).toLocaleString() + '面 ';
         const row = rows[pvInfo.multipv?.[0] || 1];
-        row.scoreOutput.textContent = formatPvScore(pvInfo.score, targetStep.position.sideToMove);
+        row.scoreOutput.textContent = formatPvScoreValue(parsePvScore(pvInfo.score, targetStep.position.sideToMove));
         row.depthOutput.textContent = pvInfo.depth?.[0] + '/' + pvInfo.seldepth?.[0];
         row.moveUsis = pvInfo.pv || [];
         row.pvOutput.textContent = row.pvOutput.title = formatPvMoveUsis(targetStep, row.moveUsis).join(' ');

@@ -1,3 +1,14 @@
+import {
+  getMoveFrom,
+  getMoveTo,
+  isMoveDropped,
+  isMovePromoted,
+  makeDrop,
+  makeMove,
+  parseMoveUsi,
+  squareN,
+} from './shogi.mjs';
+
 export default class ShogiEngine {
   constructor(factory, options) {
     this.factory = factory;
@@ -71,10 +82,27 @@ export default class ShogiEngine {
     }
   }
 
-  async moves(gameUsi, checksOnly) {
+  async getFromToMap(gameUsi, checks) {
     await this.postCommand(gameUsi);
-    const line = (await this.callCommand(checksOnly ? 'checks' : 'moves', () => true)).trim();
-    return line ? line.split(/\s+/) : [];
+    const fromToMap = new Map();
+    const line = (await this.callCommand(checks ? 'checks' : 'moves', () => true)).trim();
+    if (line) {
+      for (const moveUsi of line.split(/\s+/)) {
+        const move = parseMoveUsi(moveUsi);
+        if (move) {
+          const from = getMoveFrom(move);
+          const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
+          let toMap = fromToMap.get(key);
+          if (!toMap) {
+            toMap = new Map();
+            fromToMap.set(key, toMap);
+          }
+          const to = getMoveTo(move);
+          toMap.set(to, (toMap.get(to) || 0) | (isMovePromoted(move) ? 2 : 1));
+        }
+      }
+    }
+    return fromToMap;
   }
 
   async think(gameUsi, time, options, callback) {
