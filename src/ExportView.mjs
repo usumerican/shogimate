@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import { on, parseHtml } from './browser.mjs';
+import { on, parseHtml, setTextareaValue } from './browser.mjs';
 
 export default class ExportView {
   constructor(app) {
@@ -35,7 +35,7 @@ export default class ExportView {
   }
 
   show(records) {
-    this.textOutput.value = records.join('\n') + '\n';
+    setTextareaValue(this.textOutput, records.join('\n') + '\n');
     this.app.pushView(this);
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -43,7 +43,7 @@ export default class ExportView {
   }
 
   hide(value) {
-    this.app.popView();
+    this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
       this.resolve = null;

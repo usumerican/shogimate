@@ -1,9 +1,11 @@
 /* eslint-env browser */
 
+import MatchSettingsView from './MatchSettingsView.mjs';
+import MenuView from './MenuView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml } from './browser.mjs';
-import { formatPvScore, formatStep } from './shogi.mjs';
+import { formatPvMoveUsis, formatPvScoreValue, formatSfen, formatStep, sideInfos } from './shogi.mjs';
 
 export default class BrowseView {
   constructor(app) {
@@ -13,7 +15,7 @@ export default class BrowseView {
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
           <div class="TitleOutput Center"></div>
-          <button class="ResearchButton">検討</button>
+          <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
         <table class="StepTable">
@@ -41,8 +43,32 @@ export default class BrowseView {
       this.hide();
     });
 
-    on(this.el.querySelector('.ResearchButton'), 'click', () => {
-      new ResearchView(this.app).show(this.game, this.steps[this.stepIndex]);
+    on(this.el.querySelector('.MenuButton'), 'click', async () => {
+      new MenuView(this.app).show('メニュー', [
+        ...this.shogiPanel.createMenuItems(),
+        {
+          title: '検討',
+          callback: () => {
+            new ResearchView(this.app).show(this.game, this.getCurrStep());
+          },
+        },
+        {
+          title: '対局',
+          callback: () => {
+            const currStep = this.getCurrStep();
+            new MatchSettingsView(this.app).show(
+              {
+                startName: this.game.startName,
+                auto: currStep.position.sideToMove ? 1 : 2,
+                level: this.game.level,
+                positionSpecified: true,
+                positionSfen: formatSfen(currStep.position),
+              },
+              true
+            );
+          },
+        },
+      ]);
     });
 
     on(this.firstButton, 'click', () => {
@@ -65,33 +91,39 @@ export default class BrowseView {
   show(title, game, step) {
     this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
+    const startNumber = this.game.startStep.position.number;
     this.steps = [];
+    const rows = [];
     this.walkSteps(this.game.startStep, (st) => {
       this.steps.push(st);
+      const row = parseHtml(`
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      `);
+      if (st.isMove()) {
+        row.children[0].textContent = st.position.number - startNumber;
+      }
+      row.children[1].textContent = formatStep(st);
+      on(row, 'click', () => {
+        this.changeStep(row.rowIndex);
+      });
+      if (st.analysis) {
+        if (st.parent?.analysis && st.move !== st.parent.analysis.bestMove) {
+          if ((st.analysis.scoreValue - st.parent.analysis.scoreValue) * (st.position.sideToMove ? 1 : -1) <= -400) {
+            row.children[2].textContent = sideInfos[st.position.sideToMove ^ 1].char + '悪手';
+          }
+        }
+        row.children[3].textContent = formatPvScoreValue(st.analysis.scoreValue);
+        row.children[4].textContent = formatPvMoveUsis(st, st.analysis.pv).join(' ');
+      }
+      rows.push(row);
     });
-    const startNumber = this.game.startStep.position.number;
-    this.stepTbody.replaceChildren(
-      ...this.steps.map((st, i) => {
-        const row = parseHtml(`
-          <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-        `);
-        if (st.isMove()) {
-          row.children[0].textContent = st.position.number - startNumber;
-        }
-        row.children[1].textContent = formatStep(st);
-        if (st.analysis) {
-          row.children[2].textContent = formatPvScore(st.analysis.score, st.position.sideToMove);
-        }
-        on(row, 'click', () => {
-          this.changeStep(i);
-        });
-        return row;
-      })
-    );
+    this.stepTbody.replaceChildren(...rows);
     this.changeStep(this.steps.indexOf(step));
     this.app.pushView(this);
   }
@@ -106,11 +138,12 @@ export default class BrowseView {
   }
 
   hide() {
-    this.app.popView();
+    this.app.popView(this);
   }
 
   changeStep(stepIndex) {
     this.stepIndex = Math.max(0, Math.min(this.steps.length - 1, stepIndex));
+    const currStep = this.getCurrStep();
     for (const row of this.stepTbody.querySelectorAll('.Selected')) {
       row.classList.remove('Selected');
     }
@@ -122,10 +155,13 @@ export default class BrowseView {
     this.pageOutput.textContent = `${this.stepIndex} / ${this.steps.length - 1}`;
     this.firstButton.disabled = this.prevButton.disabled = !this.canStepPrev();
     this.lastButton.disabled = this.nextButton.disabled = !this.canStepNext();
-    const step = this.steps[this.stepIndex];
-    this.shogiPanel.changeStep(step);
-    this.shogiPanel.bestMove = step.analysis?.bestMove || 0;
+    this.shogiPanel.changeStep(currStep);
+    this.shogiPanel.bestMove = currStep.analysis?.bestMove || 0;
     this.shogiPanel.request();
+  }
+
+  getCurrStep() {
+    return this.steps[this.stepIndex];
   }
 
   canStepPrev() {

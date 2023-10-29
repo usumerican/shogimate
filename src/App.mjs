@@ -147,10 +147,20 @@ export default class App {
     this.focusView(view);
   }
 
-  popView() {
+  popView(view) {
     if (this.viewStack.length > 1) {
-      this.root.removeChild(this.viewStack.shift().el);
-      this.focusView(this.viewStack[0]);
+      const currView = this.viewStack[0];
+      if (!view) {
+        view = currView;
+      }
+      const i = this.viewStack.indexOf(view);
+      if (i >= 0) {
+        this.viewStack.splice(i, 1);
+      }
+      this.root.removeChild(view.el);
+      if (this.viewStack[0] !== currView) {
+        this.focusView(this.viewStack[0]);
+      }
     }
   }
 

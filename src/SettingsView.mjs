@@ -7,7 +7,7 @@ export default class SettingsView {
     this.app = app;
     this.el = parseHtml(`
       <div class="SettingsView">
-        <div class="Center">設定</div>
+        <div class="Center">アプリ設定</div>
         <div class="FieldList">
           <div class="FieldItem">
             <span class="Center">駒音</span>
@@ -65,7 +65,7 @@ export default class SettingsView {
   }
 
   hide(value) {
-    this.app.popView();
+    this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
       this.resolve = null;

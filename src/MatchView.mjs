@@ -1,8 +1,16 @@
 import BrowseView from './BrowseView.mjs';
 import ConfirmView from './ConfirmView.mjs';
+import MenuView from './MenuView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
-import { on, parseHtml } from './browser.mjs';
-import { formatGameUsiFromLastStep, formatPvMoveUsis, formatPvScore, parseMoveUsi, parsePvInfoUsi } from './shogi.mjs';
+import { on, parseHtml, setTextareaValue } from './browser.mjs';
+import {
+  formatGameUsiFromLastStep,
+  formatPvMoveUsis,
+  formatPvScoreValue,
+  parseMoveUsi,
+  parsePvInfoUsi,
+  parsePvScore,
+} from './shogi.mjs';
 
 export default class MatchView {
   constructor(app) {
@@ -12,6 +20,7 @@ export default class MatchView {
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
           <div class="TitleOutput Center">対局</div>
+          <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
         <textarea class="HintOutput" readonly></textarea>
@@ -30,6 +39,10 @@ export default class MatchView {
       this.hide();
     });
 
+    on(this.el.querySelector('.MenuButton'), 'click', () => {
+      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
+    });
+
     on(this.el.querySelector('.UndoButton'), 'click', () => {
       if (this.step.parent) {
         this.step.appendEnd('待った');
@@ -45,15 +58,13 @@ export default class MatchView {
 
     on(this.el.querySelector('.HintButton'), 'click', async () => {
       const targetStep = this.step;
-      targetStep.hint = await this.research(targetStep, 1000);
+      targetStep.hint = await this.analyze(targetStep, 1000);
       if (targetStep.hint) {
-        const pvMoveUsis = targetStep.hint.pv;
-        targetStep.hint.bestMove = parseMoveUsi(pvMoveUsis[0]);
         targetStep.hint.text =
           '#ヒント[' +
-          formatPvScore(targetStep.hint.score, targetStep.position.sideToMove) +
+          formatPvScoreValue(targetStep.hint.scoreValue) +
           '] ' +
-          formatPvMoveUsis(targetStep, pvMoveUsis).join(' ');
+          formatPvMoveUsis(targetStep, targetStep.hint.pv).join(' ');
       }
       this.update();
     });
@@ -76,7 +87,7 @@ export default class MatchView {
   }
 
   hide() {
-    this.app.popView();
+    this.app.popView(this);
   }
 
   onPointerBefore() {
@@ -93,22 +104,23 @@ export default class MatchView {
   update() {
     this.shogiPanel.changeStep(this.step);
     this.shogiPanel.bestMove = this.step.hint?.bestMove || 0;
-    this.hintOutput.textContent = this.step.hint?.text || '';
+    setTextareaValue(this.hintOutput, this.step.hint?.text || '');
     this.shogiPanel.request();
   }
 
   async think() {
     const targetStep = this.step;
-    if (!(await this.shogiPanel.getFromToMap()).size) {
+    targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
+    targetStep.fromToMap = await this.app.engine.getFromToMap(targetStep.gameUsi);
+    if (!targetStep.fromToMap.size) {
       await this.endGame(targetStep, '詰み');
       return;
     }
-    targetStep.analysis = await this.research(targetStep, 500);
-    targetStep.analysis.bestMove = parseMoveUsi(targetStep.analysis.pv[0]);
+    targetStep.analysis = await this.analyze(targetStep, 500);
     if (this.isSideAuto()) {
       const moveUsi = (
         await Promise.all([
-          this.app.engine.bestmove(formatGameUsiFromLastStep(targetStep), 100, this.game.level),
+          this.app.engine.bestmove(targetStep.gameUsi, 100, this.game.level),
           new Promise((resolve) => setTimeout(resolve, 100)),
         ])
       )[0];
@@ -123,12 +135,15 @@ export default class MatchView {
     }
   }
 
-  async research(targetStep, time) {
+  async analyze(targetStep, time) {
     let pvInfoUsi;
-    await this.app.engine.research(formatGameUsiFromLastStep(targetStep), time, 1, (line) => {
+    await this.app.engine.research(targetStep.gameUsi, time, 1, (line) => {
       pvInfoUsi = line;
     });
-    return parsePvInfoUsi(pvInfoUsi);
+    const pvInfo = parsePvInfoUsi(pvInfoUsi);
+    pvInfo.bestMove = parseMoveUsi(pvInfo.pv[0]);
+    pvInfo.scoreValue = parsePvScore(pvInfo.score, targetStep.position.sideToMove);
+    return pvInfo;
   }
 
   isSideAuto(step = this.step) {

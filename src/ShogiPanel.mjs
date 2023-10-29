@@ -1,11 +1,13 @@
 /* eslint-env browser */
 
 import ConfirmView from './ConfirmView.mjs';
+import SettingsView from './SettingsView.mjs';
 import { on } from './browser.mjs';
 import {
   colInfos,
   colN,
-  formatGameUsiFromLastStep,
+  formatGameUsi,
+  formatSfen,
   getCol,
   getMoveFrom,
   getMoveTo,
@@ -18,13 +20,11 @@ import {
   handOrderMap,
   isKindPromoted,
   isMoveDropped,
-  isMovePromoted,
   kindNames,
   makeDrop,
   makeMove,
   makePiece,
   makeSquare,
-  parseMoveUsi,
   rowInfos,
   rowN,
   sideInfos,
@@ -149,7 +149,7 @@ export default class ShogiPanel {
       if (piece) {
         if (getPieceSide(piece) === this.step.position.sideToMove) {
           this.nextMove = makeMove(sq, squareN);
-          this.nextToMap = (await this.getFromToMap()).get(this.nextMove);
+          this.nextToMap = this.step.fromToMap?.get(this.nextMove);
         }
       }
     }
@@ -167,30 +167,9 @@ export default class ShogiPanel {
       this.resetNext();
     } else {
       this.nextMove = makeDrop(base, squareN);
-      this.nextToMap = (await this.getFromToMap()).get(this.nextMove);
+      this.nextToMap = this.step.fromToMap?.get(this.nextMove);
     }
     this.request();
-  }
-
-  async getFromToMap() {
-    if (!this.fromToMap) {
-      this.fromToMap = new Map();
-      for (const moveUsi of await this.app.engine.moves(formatGameUsiFromLastStep(this.step), this.checksOnly)) {
-        const move = parseMoveUsi(moveUsi);
-        if (move) {
-          const from = getMoveFrom(move);
-          const key = isMoveDropped(move) ? makeDrop(from, squareN) : makeMove(from, squareN);
-          let toMap = this.fromToMap.get(key);
-          if (!toMap) {
-            toMap = new Map();
-            this.fromToMap.set(key, toMap);
-          }
-          const to = getMoveTo(move);
-          toMap.set(to, (toMap.get(to) || 0) | (isMovePromoted(move) ? 2 : 1));
-        }
-      }
-    }
-    return this.fromToMap;
   }
 
   doStep(step) {
@@ -201,7 +180,6 @@ export default class ShogiPanel {
   changeStep(step) {
     this.step = step;
     this.resetNext();
-    this.fromToMap = null;
     this.bestMove = 0;
   }
 
@@ -461,5 +439,37 @@ export default class ShogiPanel {
     } finally {
       context.restore();
     }
+  }
+
+  createMenuItems() {
+    return [
+      {
+        title: '盤面の反転',
+        callback: () => {
+          this.game.inversion ^= 1;
+          this.request();
+        },
+      },
+      {
+        title: '棋譜のコピー (USI)',
+        callback: () => {
+          this.app.writeToClipboard(formatGameUsi(this.game));
+        },
+      },
+      {
+        title: '局面のコピー (SFEN)',
+        callback: () => {
+          this.app.writeToClipboard(formatSfen(this.step.position));
+        },
+      },
+      {
+        title: 'アプリ設定',
+        callback: async () => {
+          if (await new SettingsView(this.app).show()) {
+            this.request();
+          }
+        },
+      },
+    ];
   }
 }

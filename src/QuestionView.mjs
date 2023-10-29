@@ -4,12 +4,10 @@ import BrowseView from './BrowseView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
-import SettingsView from './SettingsView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
 import {
   Step,
-  formatGameUsi,
   formatSfen,
   formatStep,
   parseMoveUsi,
@@ -60,31 +58,8 @@ export default class QuestionView {
       this.hide(this.changed);
     });
 
-    on(this.el.querySelector('.MenuButton'), 'click', async () => {
-      switch (
-        await new MenuView(this.app).show('メニュー', [
-          '盤面反転',
-          '開始局面のコピー (SFEN)',
-          '解答例のコピー (USI)',
-          '設定',
-        ])
-      ) {
-        case 0:
-          this.game.inversion ^= 1;
-          this.shogiPanel.request();
-          break;
-        case 1:
-          this.app.writeToClipboard(this.startSfen);
-          break;
-        case 2:
-          this.app.writeToClipboard(formatGameUsi(this.game));
-          break;
-        case 3:
-          if (await new SettingsView(this.app).show()) {
-            this.shogiPanel.request();
-          }
-          break;
-      }
+    on(this.el.querySelector('.MenuButton'), 'click', () => {
+      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
     });
 
     on(this.el.querySelector('.ResearchButton'), 'click', () => {
@@ -180,7 +155,7 @@ export default class QuestionView {
 
   hide(value) {
     this.stopClock();
-    this.app.popView();
+    this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
       this.resolve = null;
@@ -217,7 +192,7 @@ export default class QuestionView {
     this.updateRecord();
   }
 
-  updateRecord() {
+  async updateRecord() {
     this.titleOutput.textContent = `${this.title} (${this.recordOrder + 1}/${this.records.length})`;
     this.recordSelect.value = this.recordOrder;
     this.recordPrevButton.disabled = !this.canRecordPrev();
@@ -238,13 +213,12 @@ export default class QuestionView {
     this.limit = this.answerMoveUsis.length;
     this.answerButton.disabled = !this.limit;
     this.rate = rate;
-    this.shogiPanel.checksOnly = !this.rate;
     this.collectButton.disabled = this.rate;
     this.playSteps = [];
     this.playIndex = -1;
     this.playOptions = [];
     this.stepSelect.replaceChildren();
-    this.appendPlayStep(this.startStep);
+    await this.appendPlayStep(this.startStep);
     this.changePlayStep(0);
     this.startClock();
   }
@@ -275,19 +249,19 @@ export default class QuestionView {
 
   async onStepAfter(step) {
     this.app.playPieceSound();
-    this.appendPlayStep(step);
+    await this.appendPlayStep(step);
     this.changePlayStep(this.playSteps.length - 1);
     if (this.playSide === this.startSide) {
       if (this.isPlayExceeded()) {
         await this.endPlay('不詰');
-      } else if (!(await this.shogiPanel.getFromToMap()).size) {
+      } else if (!this.playStep.fromToMap?.size) {
         await this.endPlay('中断');
       }
     } else {
       const time = 500;
       const moveUsi = (
         await Promise.all([
-          this.app.engine.bestmove(formatGameUsiFromLastStep(this.playStep), time),
+          this.app.engine.bestmove(this.playStep.gameUsi, time),
           new Promise((resolve) => setTimeout(resolve, time)),
         ])
       )[0];
@@ -308,13 +282,18 @@ export default class QuestionView {
 
   async endPlay(endName) {
     this.stopClock();
-    this.appendPlayStep(this.playStep.appendEnd(endName));
+    await this.appendPlayStep(this.playStep.appendEnd(endName));
     this.changePlayStep(this.playSteps.length - 1);
     const [message, background] = endName === '詰み' ? ['成功', '#cfc6'] : ['失敗', '#fcc6'];
     new ProgressView(this.app).show(message, background, 1000);
   }
 
-  appendPlayStep(step) {
+  async appendPlayStep(step) {
+    step.gameUsi = formatGameUsiFromLastStep(step);
+    step.fromToMap = await this.app.engine.getFromToMap(
+      step.gameUsi,
+      !this.rate && step.position.sideToMove === this.startSide
+    );
     this.playSteps.push(step);
     const option = new Option((step.isMove() ? `${step.position.number - this.startNumber}. ` : '') + formatStep(step));
     option.parentIndex = this.playIndex;

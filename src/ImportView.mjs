@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
 import ConfirmView from './ConfirmView.mjs';
-import { on, parseHtml } from './browser.mjs';
+import { on, parseHtml, setTextareaValue } from './browser.mjs';
 import { formatGameUsi, parseGameUsi } from './shogi.mjs';
 
 export default class ImportView {
@@ -35,7 +35,7 @@ export default class ImportView {
       if (file) {
         const reader = new FileReader();
         reader.onload = () => {
-          this.changeText(reader.result);
+          setTextareaValue(this.textInput, reader.result);
         };
         reader.readAsText(file, 'UTF-8');
       }
@@ -85,7 +85,7 @@ export default class ImportView {
   }
 
   hide(value) {
-    this.app.popView();
+    this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
       this.resolve = null;
@@ -101,10 +101,5 @@ export default class ImportView {
       record = record.slice(5);
     }
     return record;
-  }
-
-  changeText(text) {
-    this.textInput.value = text;
-    this.textInput.scrollTop = 0;
   }
 }

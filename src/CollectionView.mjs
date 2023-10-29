@@ -73,7 +73,7 @@ export default class CollectionView {
     this.limitItemMap = this.limitItems.reduce((map, item) => (map.set(item.limit, item), map), new Map());
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
-      this.app.popView();
+      this.app.popView(this);
     });
 
     on(this.el.querySelector('.SelectButton'), 'click', () => {

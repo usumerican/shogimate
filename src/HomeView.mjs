@@ -20,7 +20,7 @@ export default class HomeView {
         <button class="MatchButton">AI 対局</button>
         <div class="ToolBar">
           <button class="InfoButton">ソース</button>
-          <button class="SettingsButton">設定</button>
+          <button class="SettingsButton">アプリ設定</button>
           <button class="ReloadButton">再読込</button>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default class HomeView {
     });
 
     on(this.el.querySelector('.MatchButton'), 'click', () => {
-      new MatchSettingsView(this.app).show();
+      new MatchSettingsView(this.app).show(this.app.settings.match);
     });
   }
 

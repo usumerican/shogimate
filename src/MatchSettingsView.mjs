@@ -4,7 +4,7 @@ import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { parseGameUsi, startInfos } from './shogi.mjs';
+import { parseGameUsi, startInfos, startNameSfenMap } from './shogi.mjs';
 
 export default class MatchSettingsView {
   constructor(app) {
@@ -24,6 +24,10 @@ export default class MatchSettingsView {
             </select>
             <select class="LevelSelect"></select>
           </div>
+          <div class="PositionBar">
+            <label><input type="checkbox" class="PositionSpecifiedCheckbox" />指定局面</label>
+            <input class="PositionSfenInput" placeholder="指定局面SFEN" />
+          </div>
           <div class="ToolBar">
             <button class="CloseButton">キャンセル</button>
             <button class="StartButton">開始</button>
@@ -33,13 +37,23 @@ export default class MatchSettingsView {
     `);
     this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'));
     this.startSelect = this.el.querySelector('.StartSelect');
-    this.startSelect.replaceChildren(...startInfos.map((info) => new Option(info.name, info.sfen)));
+    this.startSelect.replaceChildren(...startInfos.map((info) => new Option(info.name)));
     this.autoSelect = this.el.querySelector('.AutoSelect');
     this.levelSelect = this.el.querySelector('.LevelSelect');
     this.levelSelect.replaceChildren(...[...Array(21).keys()].map((i) => new Option(`レベル ${i}`, i)));
+    this.positionSpecifiedCheckbox = this.el.querySelector('.PositionSpecifiedCheckbox');
+    this.positionSfenInput = this.el.querySelector('.PositionSfenInput');
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
+    });
+
+    on(this.positionSpecifiedCheckbox, 'change', () => {
+      this.update();
+    });
+
+    on(this.positionSfenInput, 'change', () => {
+      this.update();
     });
 
     on(this.startSelect, 'change', () => {
@@ -51,7 +65,6 @@ export default class MatchSettingsView {
     });
 
     on(this.el.querySelector('.StartButton'), 'click', async () => {
-      const start = this.startSelect.value;
       const auto = +this.autoSelect.value;
       if (auto >= 0) {
         this.game.auto = auto;
@@ -64,11 +77,19 @@ export default class MatchSettingsView {
         }
         this.game.auto = side ? 1 : 2;
       }
-      const level = +this.levelSelect.value;
-      this.game.level = level;
+      this.game.startName = this.startSelect.value;
+      this.game.level = +this.levelSelect.value;
       this.game.inversion = this.game.auto === 1 ? 1 : 0;
-      this.app.settings.match = { start, auto, level };
-      this.app.saveSettings();
+      if (!this.temporary) {
+        this.app.settings.match = {
+          positionSpecified: this.positionSpecifiedCheckbox.checked,
+          positionSfen: this.positionSfenInput.value,
+          startName: this.game.startName,
+          auto,
+          level: this.game.level,
+        };
+        this.app.saveSettings();
+      }
       this.hide();
       new MatchView(this.app).show(
         auto ? this.levelSelect.selectedOptions[0].text : this.autoSelect.selectedOptions[0].text,
@@ -77,20 +98,26 @@ export default class MatchSettingsView {
     });
   }
 
-  show() {
-    setSelectValue(this.startSelect, this.app.settings.match?.start);
-    setSelectValue(this.autoSelect, this.app.settings.match?.auto);
-    setSelectValue(this.levelSelect, this.app.settings.match?.level);
+  show({ startName, auto, level, positionSpecified, positionSfen } = {}, temporary) {
+    setSelectValue(this.startSelect, startName);
+    setSelectValue(this.autoSelect, auto);
+    setSelectValue(this.levelSelect, level);
+    this.positionSpecifiedCheckbox.checked = positionSpecified;
+    this.positionSfenInput.value = positionSfen || '';
+    this.temporary = temporary;
     this.update();
     this.app.pushView(this);
   }
 
   hide() {
-    this.app.popView();
+    this.app.popView(this);
   }
 
   update() {
-    this.game = this.shogiPanel.game = parseGameUsi(this.startSelect.value);
+    this.game = this.shogiPanel.game = parseGameUsi(
+      (this.positionSpecifiedCheckbox.checked && this.positionSfenInput.value) ||
+        startNameSfenMap.get(this.startSelect.value)
+    );
     this.game.inversion = +this.autoSelect.value === 1 ? 1 : 0;
     this.game.sideNames[0] = this.autoSelect.options[1].text = this.startSelect.selectedIndex ? '下手' : '先手';
     this.game.sideNames[1] = this.autoSelect.options[2].text = this.startSelect.selectedIndex ? '上手' : '後手';
