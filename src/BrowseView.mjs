@@ -5,7 +5,7 @@ import MenuView from './MenuView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml } from './browser.mjs';
-import { formatPvMoveUsis, formatPvScoreValue, formatSfen, formatStep, sideInfos } from './shogi.mjs';
+import { Game, Step, formatPvMoveUsis, formatPvScoreValue, formatSfen, formatStep, sideInfos } from './shogi.mjs';
 
 export default class BrowseView {
   constructor(app) {
@@ -24,7 +24,7 @@ export default class BrowseView {
         <div class="ToolBar">
           <button class="FirstButton">|&lt;</button>
           <button class="PrevButton">&lt;</button>
-          <output class="PageOutput Center"></output>
+          <button class="ParentButton"></button>
           <button class="NextButton">&gt;</button>
           <button class="LastButton">&gt;|</button>
         </div>
@@ -33,7 +33,7 @@ export default class BrowseView {
     this.titleOutput = this.el.querySelector('.TitleOutput');
     this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'));
     this.stepTbody = this.el.querySelector('.StepTbody');
-    this.pageOutput = this.el.querySelector('.PageOutput');
+    this.parentButton = this.el.querySelector('.ParentButton');
     this.firstButton = this.el.querySelector('.FirstButton');
     this.prevButton = this.el.querySelector('.PrevButton');
     this.nextButton = this.el.querySelector('.NextButton');
@@ -47,13 +47,13 @@ export default class BrowseView {
       new MenuView(this.app).show('メニュー', [
         ...this.shogiPanel.createMenuItems(),
         {
-          title: '検討',
+          title: '局面の検討',
           callback: () => {
             new ResearchView(this.app).show(this.game, this.getCurrStep());
           },
         },
         {
-          title: '対局',
+          title: '指定局面として対局',
           callback: () => {
             const currStep = this.getCurrStep();
             new MatchSettingsView(this.app).show(
@@ -71,60 +71,79 @@ export default class BrowseView {
       ]);
     });
 
+    on(this.parentButton, 'click', () => {
+      this.jump(this.steps.indexOf(this.getCurrStep().parent));
+    });
+
     on(this.firstButton, 'click', () => {
-      this.changeStep(0);
+      this.jump(0);
     });
 
     onLongPress(this.prevButton, () => {
-      this.changeStep(this.stepIndex - 1);
+      this.jump(this.stepIndex - 1);
     });
 
     onLongPress(this.nextButton, () => {
-      this.changeStep(this.stepIndex + 1);
+      this.jump(this.stepIndex + 1);
     });
 
     on(this.lastButton, 'click', () => {
-      this.changeStep(this.steps.length - 1);
+      this.jump(this.steps.length - 1);
     });
   }
 
-  show(title, game, step) {
+  show(title, game, step, analyzed) {
     this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
     const startNumber = this.game.startStep.position.number;
     this.steps = [];
     const rows = [];
-    this.walkSteps(this.game.startStep, (st) => {
-      this.steps.push(st);
+    this.walkSteps(this.game.startStep, (rowStep) => {
+      this.steps.push(rowStep);
       const row = parseHtml(`
         <tr>
           <td></td>
           <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
         </tr>
       `);
-      if (st.isMove()) {
-        row.children[0].textContent = st.position.number - startNumber;
+      if (rowStep.isMove()) {
+        row.children[0].textContent = rowStep.position.number - startNumber;
       }
-      row.children[1].textContent = formatStep(st);
+      row.children[1].textContent = formatStep(rowStep);
       on(row, 'click', () => {
-        this.changeStep(row.rowIndex);
+        this.jump(row.rowIndex);
       });
-      if (st.analysis) {
-        if (st.parent?.analysis && st.move !== st.parent.analysis.bestMove) {
-          if ((st.analysis.scoreValue - st.parent.analysis.scoreValue) * (st.position.sideToMove ? 1 : -1) <= -400) {
-            row.children[2].textContent = sideInfos[st.position.sideToMove ^ 1].char + '悪手';
+      if (analyzed) {
+        const evalCell = row.insertCell();
+        const scoreCell = row.insertCell();
+        const pvCell = row.insertCell();
+        pvCell.classList.add('PvOutput');
+        if (rowStep.analysis) {
+          if (rowStep.parent?.analysis && rowStep.move !== rowStep.parent.analysis.bestMove) {
+            if (
+              (rowStep.analysis.scoreValue - rowStep.parent.analysis.scoreValue) *
+                (rowStep.position.sideToMove ? 1 : -1) <=
+              -400
+            ) {
+              evalCell.textContent = sideInfos[rowStep.position.sideToMove ^ 1].char + '悪手';
+            }
           }
+          scoreCell.textContent = formatPvScoreValue(rowStep.analysis.scoreValue);
+          pvCell.textContent = formatPvMoveUsis(rowStep, rowStep.analysis.pv).join(' ');
+          on(pvCell, 'click', () => {
+            const pvGame = new Game(this.game);
+            let pvStep = (pvGame.startStep = new Step({ position: rowStep.position }));
+            for (const moveUsi of rowStep.analysis.pv) {
+              pvStep = pvStep.appendMoveUsi(moveUsi);
+            }
+            new BrowseView(this.app).show('読み筋', pvGame);
+          });
         }
-        row.children[3].textContent = formatPvScoreValue(st.analysis.scoreValue);
-        row.children[4].textContent = formatPvMoveUsis(st, st.analysis.pv).join(' ');
       }
       rows.push(row);
     });
     this.stepTbody.replaceChildren(...rows);
-    this.changeStep(this.steps.indexOf(step));
+    this.jump(this.steps.indexOf(step));
     this.app.pushView(this);
   }
 
@@ -141,7 +160,7 @@ export default class BrowseView {
     this.app.popView(this);
   }
 
-  changeStep(stepIndex) {
+  jump(stepIndex) {
     this.stepIndex = Math.max(0, Math.min(this.steps.length - 1, stepIndex));
     const currStep = this.getCurrStep();
     for (const row of this.stepTbody.querySelectorAll('.Selected')) {
@@ -152,8 +171,8 @@ export default class BrowseView {
     setTimeout(() => {
       row.scrollIntoView({ block: 'center' });
     });
-    this.pageOutput.textContent = `${this.stepIndex} / ${this.steps.length - 1}`;
-    this.firstButton.disabled = this.prevButton.disabled = !this.canStepPrev();
+    this.parentButton.textContent = `${this.stepIndex} / ${this.steps.length - 1}`;
+    this.firstButton.disabled = this.prevButton.disabled = this.parentButton.disabled = !this.canStepPrev();
     this.lastButton.disabled = this.nextButton.disabled = !this.canStepNext();
     this.shogiPanel.changeStep(currStep);
     this.shogiPanel.bestMove = currStep.analysis?.bestMove || 0;

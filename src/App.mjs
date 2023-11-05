@@ -2,7 +2,7 @@
 
 import ConfirmView from './ConfirmView.mjs';
 import HomeView from './HomeView.mjs';
-import { KING, makePiece } from './shogi.mjs';
+import { KING, kindInfos, makePiece } from './shogi.mjs';
 
 export default class App {
   static NAME = 'shogimate';
@@ -45,10 +45,14 @@ export default class App {
         title: 'ヒヨコの鳴き声',
       },
     ];
-    this.pieceStyles = [
+    const pieceStyles = [
       {
         name: 'black-red',
         title: '標準',
+        bodyColors: ['#fe9', '#fe9'],
+        textColors: ['#000', '#000'],
+        promotedColors: ['#f00', '#f00'],
+        filterColors: ['#6666', '#6666'],
       },
       {
         name: 'black-white',
@@ -56,6 +60,7 @@ export default class App {
         bodyColors: ['#000', '#fff'],
         textColors: ['#fff', '#000'],
         promotedColors: ['#0ff', '#f00'],
+        filterColors: ['#6666', '#6666'],
       },
       {
         name: 'blue-red',
@@ -66,15 +71,18 @@ export default class App {
         filterColors: ['#ccf6', '#fcc6'],
       },
     ];
-    this.pieceTitleSets = [
+    this.defaultPieceStyle = pieceStyles[0];
+    this.pieceStyleMap = pieceStyles.reduce((map, style) => map.set(style.name, style), new Map());
+    const pieceTitleSets = [
       {
         name: 'name',
         title: '標準',
+        titles: kindInfos.map((info) => (info ? info.name : '')),
       },
       {
         name: 'char',
         title: '一文字',
-        titles: ['', '歩', '香', '桂', '銀', '角', '飛', '金', '玉', 'と', '杏', '圭', '全', '馬', '竜'],
+        titles: kindInfos.map((info) => (info ? info.char : '')),
       },
       {
         name: 'title',
@@ -88,31 +96,35 @@ export default class App {
           '角行',
           '飛車',
           '金将',
-          '王将',
+          '玉将',
           'と金',
           '成香',
           '成桂',
           '成銀',
-          '龍馬',
-          '竜王',
-          '',
-        ].reduce((titles, title, kind) => {
-          titles[kind] = title;
-          titles[makePiece(kind, 1)] = kind === KING ? '玉将' : title;
-          return titles;
-        }, []),
+          '竜馬',
+          '龍王',
+        ],
       },
       {
         name: 'en',
         title: '英字',
-        titles: ['', 'P', 'L', 'N', 'S', 'B', 'R', 'G', 'K', 'Ⓟ', 'Ⓛ', 'Ⓝ', 'Ⓢ', 'H', 'D'],
+        titles: kindInfos.map((info) => (info ? info.usi : '')),
       },
       {
         name: 'animal',
         title: '動物絵文字',
         titles: ['', '🐥', '🐭', '🐰', '🐵', '🐯', '🐻', '🐶', '🦁', '🐔', '🐁', '🐇', '🐒', '🦄', '🐲'],
       },
-    ];
+    ].map((titleSet) => {
+      titleSet.titles = titleSet.titles.reduce((arr, title, kind) => {
+        arr[kind] = title;
+        arr[makePiece(kind, 1)] = kind === KING ? title.replace('玉', '王') : title;
+        return arr;
+      }, []);
+      return titleSet;
+    });
+    this.defaultPieceTitleSet = pieceTitleSets[0];
+    this.pieceTitleSetMap = pieceTitleSets.reduce((map, titleSet) => map.set(titleSet.name, titleSet), new Map());
     this.bookMap = [
       { name: 'mate3', title: '実戦詰3手', volumeCount: 998 },
       { name: 'mate5', title: '実戦詰5手', volumeCount: 998 },
@@ -273,13 +285,10 @@ export default class App {
   }
 
   getPieceStyle() {
-    return this.pieceStyles.find((style) => style.name === this.settings.pieceStyleName) || this.pieceStyles[0];
+    return this.pieceStyleMap.get(this.settings.pieceStyleName) || this.defaultPieceStyle;
   }
 
   getPieceTitleSet() {
-    return (
-      this.pieceTitleSets.find((titleSet) => titleSet.name === this.settings.pieceTitleSetName) ||
-      this.pieceTitleSets[0]
-    );
+    return this.pieceTitleSetMap.get(this.settings.pieceTitleSetName) || this.defaultPieceTitleSet;
   }
 }

@@ -279,6 +279,7 @@
       tr {
         height: $rowH;
         white-space: nowrap;
+        background: #fff;
       }
 
       th {
@@ -287,13 +288,14 @@
       }
 
       td {
-        background: #fff;
+        min-width: 1rem;
       }
 
       .PvOutput {
         width: 100%;
         max-width: 0;
         text-overflow: ellipsis;
+        color: #00c;
       }
     }
   }
@@ -348,6 +350,17 @@
 
       .Selected {
         background: #cff;
+      }
+
+      td {
+        min-width: 1rem;
+      }
+
+      .PvOutput {
+        width: 100%;
+        max-width: 0;
+        text-overflow: ellipsis;
+        color: #00c;
       }
     }
   }

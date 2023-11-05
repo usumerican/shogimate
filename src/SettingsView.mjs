@@ -31,10 +31,12 @@ export default class SettingsView {
     this.pieceSoundSelect = this.el.querySelector('.PieceSoundSelect');
     this.pieceSoundSelect.replaceChildren(...this.app.pieceSounds.map((sound) => new Option(sound.title, sound.name)));
     this.pieceStyleSelect = this.el.querySelector('.PieceStyleSelect');
-    this.pieceStyleSelect.replaceChildren(...this.app.pieceStyles.map((style) => new Option(style.title, style.name)));
+    this.pieceStyleSelect.replaceChildren(
+      ...[...this.app.pieceStyleMap].map(([name, style]) => new Option(style.title, name))
+    );
     this.pieceTitleSetSelect = this.el.querySelector('.PieceTitleSetSelect');
     this.pieceTitleSetSelect.replaceChildren(
-      ...this.app.pieceTitleSets.map((titleSet) => new Option(titleSet.title, titleSet.name))
+      ...[...this.app.pieceTitleSetMap].map(([name, titleSet]) => new Option(titleSet.title, name))
     );
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {

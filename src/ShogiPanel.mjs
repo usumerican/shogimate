@@ -20,7 +20,6 @@ import {
   handOrderMap,
   isKindPromoted,
   isMoveDropped,
-  kindNames,
   makeDrop,
   makeMove,
   makePiece,
@@ -109,7 +108,7 @@ export default class ShogiPanel {
       return;
     }
     const canvasRect = this.el.getBoundingClientRect();
-    const i = this.game.inversion ? -1 : 1;
+    const i = this.game.flipped ? -1 : 1;
     const x = (i * ((pointer.clientX - canvasRect.left) * devicePixelRatio - this.matrix[4])) / this.matrix[0];
     const y = (i * ((pointer.clientY - canvasRect.top) * devicePixelRatio - this.matrix[5])) / this.matrix[3];
     if (this.rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
@@ -197,7 +196,7 @@ export default class ShogiPanel {
         try {
           context.clearRect(0, 0, this.el.width, this.el.height);
           context.setTransform(...this.matrix);
-          if (this.game.inversion) {
+          if (this.game.flipped) {
             context.transform(-1, 0, 0, -1, 0, 0);
           }
           this.render(context);
@@ -213,24 +212,16 @@ export default class ShogiPanel {
       return;
     }
 
-    const nextSide = this.step.position.sideToMove;
     this.pieceStyle = this.app.getPieceStyle();
     this.pieceTitleSet = this.app.getPieceTitleSet();
-    const filterColors = this.pieceStyle?.filterColors || ['#6666', '#6666'];
-    context.fillStyle = filterColors[nextSide];
+    const nextSide = this.step.position.sideToMove;
+    const nextFilterColor = this.pieceStyle.filterColors[nextSide];
+    context.fillStyle = nextFilterColor;
     context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
 
-    if (this.nextMove) {
-      context.fillStyle = filterColors[nextSide];
-      const nextMoveFrom = getMoveFrom(this.nextMove);
-      if (isMoveDropped(this.nextMove)) {
-        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
-      } else {
-        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
-      }
-    } else if (this.step.move) {
+    if (this.step.move) {
       const lastSide = nextSide ^ 1;
-      context.fillStyle = filterColors[lastSide];
+      context.fillStyle = this.pieceStyle.filterColors[lastSide];
       context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareW, this.squareH);
       const from = getMoveFrom(this.step.move);
       if (isMoveDropped(this.step.move)) {
@@ -244,6 +235,16 @@ export default class ShogiPanel {
           this.squareW,
           this.squareH
         );
+      }
+    }
+
+    if (this.nextMove) {
+      context.fillStyle = nextFilterColor;
+      const nextMoveFrom = getMoveFrom(this.nextMove);
+      if (isMoveDropped(this.nextMove)) {
+        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
+      } else {
+        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
       }
     }
 
@@ -267,14 +268,14 @@ export default class ShogiPanel {
     for (let col = 0; col < colN; col++) {
       const name = colInfos[col].name;
       const x = this.boardX + this.squareW * (0.5 + col);
-      this.renderText(context, name, x, this.boardY - this.squareH * 0.2, this.game.inversion);
-      this.renderText(context, name, x, this.boardY + this.boardH + this.squareH * 0.2, this.game.inversion);
+      this.renderText(context, name, x, this.boardY - this.squareH * 0.2, this.game.flipped);
+      this.renderText(context, name, x, this.boardY + this.boardH + this.squareH * 0.2, this.game.flipped);
     }
     for (let row = 0; row < rowN; row++) {
       const name = rowInfos[row].name;
       const y = this.boardY + this.squareH * (0.5 + row);
-      this.renderText(context, name, this.boardX - this.squareW * 0.2, y, this.game.inversion);
-      this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.game.inversion);
+      this.renderText(context, name, this.boardX - this.squareW * 0.2, y, this.game.flipped);
+      this.renderText(context, name, this.boardX + this.boardW + this.squareW * 0.2, y, this.game.flipped);
     }
 
     context.lineWidth = 4;
@@ -291,9 +292,9 @@ export default class ShogiPanel {
         this.game.sideNames[side],
         sx + this.squareW / 2,
         sy + this.squareH * (side ? -0.25 : 1.25),
-        this.game.inversion
+        this.game.flipped
       );
-      this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.inversion);
+      this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.flipped);
     }
 
     for (const sq of [30, 33, 57, 60]) {
@@ -324,7 +325,7 @@ export default class ShogiPanel {
     context.strokeStyle = '#666';
 
     if (this.nextToMap) {
-      context.fillStyle = filterColors[nextSide];
+      context.fillStyle = nextFilterColor;
       for (const to of this.nextToMap.keys()) {
         const [x, y] = this.getSquarePoint(to);
         context.beginPath();
@@ -335,7 +336,7 @@ export default class ShogiPanel {
     }
 
     if (this.bestMove) {
-      context.fillStyle = filterColors[nextSide];
+      context.fillStyle = nextFilterColor;
       this.renderArrow(context, this.bestMove, nextSide);
     }
   }
@@ -359,7 +360,7 @@ export default class ShogiPanel {
       if (count > 1) {
         context.font = this.countFont;
         context.fillStyle = '#000';
-        this.renderText(context, count, 0, this.squareH * 0.75, this.game.inversion ^ side);
+        this.renderText(context, count, 0, this.squareH * 0.75, this.game.flipped ^ side);
       }
 
       const { ax, ay, bx, by, font } = this.baseShapes[getPieceBase(kind)];
@@ -370,7 +371,7 @@ export default class ShogiPanel {
       context.lineTo(-ax, ay);
       context.lineTo(-bx, by);
       context.closePath();
-      context.fillStyle = this.pieceStyle?.bodyColors?.[side] || '#fe9';
+      context.fillStyle = this.pieceStyle.bodyColors[side];
       context.fill();
       context.lineWidth = 2;
       context.strokeStyle = '#666';
@@ -379,10 +380,9 @@ export default class ShogiPanel {
       context.font = font;
       context.textAlign = 'center';
       context.fillStyle = isKindPromoted(kind)
-        ? this.pieceStyle?.promotedColors?.[side] || '#f00'
-        : this.pieceStyle?.textColors?.[side] || '#000';
-      const titles = this.pieceTitleSet?.titles || kindNames;
-      const [ch0, ch1] = [...titles[titles.length > kindNames.length ? makePiece(kind, side) : kind]];
+        ? this.pieceStyle.promotedColors[side]
+        : this.pieceStyle.textColors[side];
+      const [ch0, ch1] = this.pieceTitleSet.titles[makePiece(kind, side)];
       if (ch1) {
         context.scale(0.8, 0.6);
         context.textBaseline = 'bottom';
@@ -398,11 +398,11 @@ export default class ShogiPanel {
     }
   }
 
-  renderText(context, text, x, y, inversion) {
+  renderText(context, text, x, y, flipped) {
     if (text) {
       context.save();
       try {
-        const cos = inversion ? -1 : 1;
+        const cos = flipped ? -1 : 1;
         context.transform(cos, 0, 0, cos, x, y);
         context.fillText(text, 0, 0);
       } finally {
@@ -446,7 +446,7 @@ export default class ShogiPanel {
       {
         title: '盤面の反転',
         callback: () => {
-          this.game.inversion ^= 1;
+          this.game.flipped ^= 1;
           this.request();
         },
       },

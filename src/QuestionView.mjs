@@ -203,7 +203,7 @@ export default class QuestionView {
     this.startSfen = formatSfen(this.startStep.position);
     this.startNumber = this.startStep.position.number;
     this.startSide = this.startStep.position.sideToMove;
-    this.game.inversion = this.startSide;
+    this.game.flipped = this.startSide;
     this.game.sideNames[this.startSide] = '攻方';
     this.game.sideNames[this.startSide ^ 1] = '受方';
     this.shogiPanel.game = this.game;
