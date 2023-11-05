@@ -158,6 +158,6 @@ export default class MatchView {
 
   doBrowse() {
     this.hide();
-    new BrowseView(this.app).show(this.title, this.game, this.step);
+    new BrowseView(this.app).show(this.title, this.game, this.step, true);
   }
 }

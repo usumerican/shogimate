@@ -4,7 +4,7 @@ import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { parseGameUsi, startInfos, startNameSfenMap } from './shogi.mjs';
+import { parseGameUsi, sideInfos, startInfos, startNameSfenMap } from './shogi.mjs';
 
 export default class MatchSettingsView {
   constructor(app) {
@@ -18,8 +18,8 @@ export default class MatchSettingsView {
             <select class="StartSelect"></select>
             <select class="AutoSelect">
               <option value="-1">振り駒</option>
-              <option value="2">先手/下手</option>
-              <option value="1">後手/上手</option>
+              <option value="2"></option>
+              <option value="1"></option>
               <option value="0">手動</option>
             </select>
             <select class="LevelSelect"></select>
@@ -79,7 +79,7 @@ export default class MatchSettingsView {
       }
       this.game.startName = this.startSelect.value;
       this.game.level = +this.levelSelect.value;
-      this.game.inversion = this.game.auto === 1 ? 1 : 0;
+      this.game.flipped = this.game.auto === 1 ? 1 : 0;
       if (!this.temporary) {
         this.app.settings.match = {
           positionSpecified: this.positionSpecifiedCheckbox.checked,
@@ -118,9 +118,10 @@ export default class MatchSettingsView {
       (this.positionSpecifiedCheckbox.checked && this.positionSfenInput.value) ||
         startNameSfenMap.get(this.startSelect.value)
     );
-    this.game.inversion = +this.autoSelect.value === 1 ? 1 : 0;
-    this.game.sideNames[0] = this.autoSelect.options[1].text = this.startSelect.selectedIndex ? '下手' : '先手';
-    this.game.sideNames[1] = this.autoSelect.options[2].text = this.startSelect.selectedIndex ? '上手' : '後手';
+    this.game.flipped = +this.autoSelect.value === 1 ? 1 : 0;
+    const key = this.startSelect.selectedIndex ? 'alias' : 'name';
+    this.game.sideNames[0] = this.autoSelect.options[1].text = sideInfos[0][key];
+    this.game.sideNames[1] = this.autoSelect.options[2].text = sideInfos[1][key];
     this.shogiPanel.step = this.game.startStep;
     this.shogiPanel.request();
   }
