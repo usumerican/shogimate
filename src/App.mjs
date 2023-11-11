@@ -2,7 +2,7 @@
 
 import ConfirmView from './ConfirmView.mjs';
 import HomeView from './HomeView.mjs';
-import { KING, kindInfos, makePiece } from './shogi.mjs';
+import { KING, kindInfos, makePiece, getMovePhonemes } from './shogi.mjs';
 
 export default class App {
   static NAME = 'shogimate';
@@ -77,12 +77,12 @@ export default class App {
       {
         name: 'name',
         title: '標準',
-        titles: kindInfos.map((info) => (info ? info.name : '')),
+        titles: kindInfos.map((info) => info.name),
       },
       {
         name: 'char',
         title: '一文字',
-        titles: kindInfos.map((info) => (info ? info.char : '')),
+        titles: kindInfos.map((info) => info.char),
       },
       {
         name: 'title',
@@ -108,7 +108,7 @@ export default class App {
       {
         name: 'en',
         title: '英字',
-        titles: kindInfos.map((info) => (info ? info.usi : '')),
+        titles: kindInfos.map((info) => info.usi),
       },
       {
         name: 'animal',
@@ -262,6 +262,13 @@ export default class App {
     await new ConfirmView(this).show('クリップボードにコピーしました。', ['OK']);
   }
 
+  initAudio() {
+    if (this.settings.pieceSoundName || this.settings.speech) {
+      this.playPieceSound(0);
+      this.speakMoveText('');
+    }
+  }
+
   async playSound(name, duration) {
     if (!name) {
       return;
@@ -290,5 +297,19 @@ export default class App {
 
   getPieceTitleSet() {
     return this.pieceTitleSetMap.get(this.settings.pieceTitleSetName) || this.defaultPieceTitleSet;
+  }
+
+  speakText(text) {
+    const uttr = new SpeechSynthesisUtterance(text);
+    uttr.lang = 'ja-JP';
+    uttr.volume = 0.5;
+    speechSynthesis.speak(uttr);
+  }
+
+  speakMoveText(moveText) {
+    if (!this.settings.speech) {
+      return;
+    }
+    this.speakText(getMovePhonemes(moveText).join(' '));
   }
 }

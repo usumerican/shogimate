@@ -6,38 +6,28 @@ import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
-import {
-  Step,
-  formatSfen,
-  formatStep,
-  parseMoveUsi,
-  usiEndNameMap,
-  parseGameUsi,
-  formatGameUsiFromLastStep,
-  formatMoveUsis,
-} from './shogi.mjs';
+import { Step, formatStep, parseMoveUsi, usiEndNameMap, parseGameUsi, formatGameUsiFromLastStep } from './shogi.mjs';
 
 export default class QuestionView {
   constructor(app) {
     this.el = parseHtml(`
       <div class="QuestionView">
-        <div class="TitleOutput Center"></div>
-        <div class="ToolBar">
+        <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
-          <select class="RecordSelect"></select>
-          <button class="CollectButton">コレクト</button>
+          <div class="TitleOutput Center"></div>
           <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
-        <div class="TitleBar">
+        <div class="ToolBar">
           <button class="ResetButton">やり直す</button>
-          <select class="StepSelect"></select>
           <button class="UndoButton">待った</button>
+          <button class="ResearchButton">検討</button>
+          <button class="AnswerButton">解答例</button>
         </div>
         <div class="ToolBar">
           <button class="RecordPrevButton">前問</button>
-          <button class="ResearchButton">検討</button>
-          <button class="AnswerButton">解答例</button>
+          <select class="RecordSelect"></select>
+          <button class="CollectButton">コレクト</button>
           <button class="RecordNextButton">次問</button>
         </div>
       </div>
@@ -48,11 +38,10 @@ export default class QuestionView {
     this.recordPrevButton = this.el.querySelector('.RecordPrevButton');
     this.recordNextButton = this.el.querySelector('.RecordNextButton');
     this.collectButton = this.el.querySelector('.CollectButton');
-    this.answerButton = this.el.querySelector('.AnswerButton');
     this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
-    this.stepSelect = this.el.querySelector('.StepSelect');
     this.resetButton = this.el.querySelector('.ResetButton');
     this.undoButton = this.el.querySelector('.UndoButton');
+    this.answerButton = this.el.querySelector('.AnswerButton');
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide(this.changed);
@@ -62,8 +51,16 @@ export default class QuestionView {
       new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
     });
 
-    on(this.el.querySelector('.ResearchButton'), 'click', () => {
-      new ResearchView(this.app).show(this.game, this.playStep);
+    on(this.recordSelect, 'change', () => {
+      this.changeRecord(+this.recordSelect.value);
+    });
+
+    onLongPress(this.recordPrevButton, () => {
+      this.doRecordPrev();
+    });
+
+    onLongPress(this.recordNextButton, () => {
+      this.doRecordNext();
     });
 
     on(this.collectButton, 'click', () => {
@@ -79,16 +76,12 @@ export default class QuestionView {
       this.recordSelect.selectedOptions[0].text = this.formatRecordOption(recordIndex, !marked);
     });
 
-    on(this.recordSelect, 'change', () => {
-      this.changeRecord(+this.recordSelect.value);
+    on(this.resetButton, 'click', () => {
+      this.doReset();
     });
 
-    onLongPress(this.recordPrevButton, () => {
-      this.doRecordPrev();
-    });
-
-    onLongPress(this.recordNextButton, () => {
-      this.doRecordNext();
+    on(this.undoButton, 'click', () => {
+      this.doUndo();
     });
 
     on(this.answerButton, 'click', () => {
@@ -98,16 +91,8 @@ export default class QuestionView {
       }
     });
 
-    on(this.stepSelect, 'change', () => {
-      this.changePlayStep(this.stepSelect.selectedIndex);
-    });
-
-    on(this.resetButton, 'click', () => {
-      this.doPlayReset();
-    });
-
-    on(this.undoButton, 'click', () => {
-      this.doPlayUndo();
+    on(this.el.querySelector('.ResearchButton'), 'click', () => {
+      new ResearchView(this.app).show(this.game, this.step);
     });
   }
 
@@ -143,7 +128,7 @@ export default class QuestionView {
     this.recordSelect.replaceChildren(...options);
     this.updateRecord();
     this.app.pushView(this);
-    this.app.playPieceSound(0);
+    this.app.initAudio();
     return new Promise((resolve) => {
       this.resolve = resolve;
     });
@@ -199,9 +184,14 @@ export default class QuestionView {
     this.recordNextButton.disabled = !this.canRecordNext();
     const [gameUsi, rate] = this.records[this.recordIndices[this.recordOrder]].split('\t');
     this.game = parseGameUsi(gameUsi);
+    this.limit = 0;
+    for (let st = this.game.startStep.children[0]; st && st.move; st = st.children[0]) {
+      this.limit++;
+    }
+    this.answerButton.disabled = !this.limit;
+    this.rate = rate;
+    this.collectButton.disabled = this.rate;
     this.startStep = new Step(this.game.startStep);
-    this.startSfen = formatSfen(this.startStep.position);
-    this.startNumber = this.startStep.position.number;
     this.startSide = this.startStep.position.sideToMove;
     this.game.flipped = this.startSide;
     this.game.sideNames[this.startSide] = '攻方';
@@ -209,18 +199,31 @@ export default class QuestionView {
     this.shogiPanel.game = this.game;
     this.shogiPanel.clocks[this.startSide] = '';
     this.shogiPanel.clocks[this.startSide ^ 1] = '';
-    this.answerMoveUsis = formatMoveUsis(this.startStep);
-    this.limit = this.answerMoveUsis.length;
-    this.answerButton.disabled = !this.limit;
-    this.rate = rate;
-    this.collectButton.disabled = this.rate;
-    this.playSteps = [];
-    this.playIndex = -1;
-    this.playOptions = [];
-    this.stepSelect.replaceChildren();
-    await this.appendPlayStep(this.startStep);
-    this.changePlayStep(0);
+    this.changeStep(this.startStep);
     this.startClock();
+    this.think();
+  }
+
+  canReset() {
+    return this.step.parent;
+  }
+
+  doReset() {
+    if (this.canReset()) {
+      this.changeStep(this.startStep);
+    }
+  }
+
+  doUndo() {
+    if (this.canReset()) {
+      let st = this.step.endName ? this.step.parent?.parent : this.step.parent;
+      for (; st; st = st.parent) {
+        if (st.position.sideToMove === this.startStep.position.sideToMove) {
+          break;
+        }
+      }
+      this.changeStep(st || this.startStep);
+    }
   }
 
   startClock() {
@@ -239,105 +242,75 @@ export default class QuestionView {
     this.clockId = 0;
   }
 
-  isPlayExceeded() {
-    return !this.rate && this.startRecordOrder >= 0 && this.limit && this.playNumber > this.limit;
-  }
-
   onPointerBefore() {
-    return !this.isPlayExceeded() && this.playSide === this.startSide;
+    return this.step.position.sideToMove === this.startSide && !this.isExceeded();
   }
 
-  async onStepAfter(step) {
+  async onMove(move) {
+    const step = this.step.appendMove(move);
     this.app.playPieceSound();
-    await this.appendPlayStep(step);
-    this.changePlayStep(this.playSteps.length - 1);
-    if (this.playSide === this.startSide) {
-      if (this.isPlayExceeded()) {
-        await this.endPlay('不詰');
-      } else if (!this.playStep.fromToMap?.size) {
-        await this.endPlay('中断');
+    this.app.speakMoveText(formatStep(step));
+    this.changeStep(step);
+    this.think();
+  }
+
+  async think() {
+    const progressView = new ProgressView(this.app);
+    progressView.show();
+    try {
+      const manual = this.step.position.sideToMove === this.startSide;
+      if (manual && this.isExceeded()) {
+        this.endGame('反則負け');
+        return;
       }
-    } else {
+      this.step.gameUsi = formatGameUsiFromLastStep(this.step);
+      this.step.fromToMap = await this.app.engine.getFromToMap(this.step.gameUsi, manual && !this.rate);
+      if (!this.step.fromToMap.size) {
+        this.endGame('詰み', !manual);
+        return;
+      }
+      if (manual) {
+        return;
+      }
       const time = 500;
       const moveUsi = (
         await Promise.all([
-          this.app.engine.bestmove(this.playStep.gameUsi, time),
+          this.app.engine.bestmove(this.step.gameUsi, time),
           new Promise((resolve) => setTimeout(resolve, time)),
         ])
       )[0];
-      if (moveUsi) {
-        const move = parseMoveUsi(moveUsi);
-        if (move) {
-          await this.onStepAfter(this.playStep.appendMove(move));
-          return;
-        }
-      }
-      if (moveUsi === 'resign') {
-        this.endPlay('詰み');
+      const move = parseMoveUsi(moveUsi);
+      if (move) {
+        this.onMove(move);
       } else {
-        await this.endPlay(usiEndNameMap.get(moveUsi) || moveUsi);
+        this.endGame(usiEndNameMap.get(moveUsi) || moveUsi);
       }
+    } finally {
+      progressView.hide();
     }
   }
 
-  async endPlay(endName) {
+  endGame(endName, success) {
     this.stopClock();
-    await this.appendPlayStep(this.playStep.appendEnd(endName));
-    this.changePlayStep(this.playSteps.length - 1);
-    const [message, background] = endName === '詰み' ? ['成功', '#cfc6'] : ['失敗', '#fcc6'];
+    this.changeStep(this.step.appendEnd(endName));
+    const [message, background] = success ? ['成功', '#cfc6'] : ['失敗', '#fcc6'];
     new ProgressView(this.app).show(message, background, 1000);
   }
 
-  async appendPlayStep(step) {
-    step.gameUsi = formatGameUsiFromLastStep(step);
-    step.fromToMap = await this.app.engine.getFromToMap(
-      step.gameUsi,
-      !this.rate && step.position.sideToMove === this.startSide
-    );
-    this.playSteps.push(step);
-    const option = new Option((step.isMove() ? `${step.position.number - this.startNumber}. ` : '') + formatStep(step));
-    option.parentIndex = this.playIndex;
-    this.playOptions.push(option);
-    this.stepSelect.appendChild(option);
-  }
-
-  canPlayReset() {
-    return this.playNumber > 0;
-  }
-
-  doPlayReset() {
-    if (this.canPlayReset()) {
-      this.changePlayStep(0);
-    }
-  }
-
-  doPlayUndo() {
-    if (this.canPlayReset()) {
-      for (let stepIndex = this.playIndex; stepIndex >= 0; ) {
-        const parentIndex = this.playOptions[stepIndex].parentIndex;
-        if (parentIndex <= 0) {
-          this.changePlayStep(0);
-          return;
-        }
-        const step = this.playSteps[stepIndex];
-        if (step.isMove() && step.position.sideToMove !== this.startSide) {
-          this.changePlayStep(parentIndex);
-          return;
-        }
-        stepIndex = parentIndex;
-      }
-    }
-  }
-
-  changePlayStep(playIndex) {
-    this.playIndex = playIndex;
-    this.playStep = this.playSteps[this.playIndex];
-    this.playSide = this.playStep.position.sideToMove;
-    this.playNumber = this.playStep.position.number - this.startNumber;
-    this.stepSelect.selectedIndex = this.playIndex;
-    this.resetButton.disabled = !this.canPlayReset();
-    this.undoButton.disabled = !this.canPlayReset();
-    this.shogiPanel.changeStep(this.playStep);
+  changeStep(step) {
+    this.step = step;
+    this.resetButton.disabled = !this.canReset();
+    this.undoButton.disabled = !this.canReset();
+    this.shogiPanel.changeStep(this.step);
     this.shogiPanel.request();
+  }
+
+  isExceeded() {
+    return (
+      !this.rate &&
+      this.startRecordOrder >= 0 &&
+      this.limit &&
+      this.step.position.number - this.startStep.position.number > this.limit
+    );
   }
 }
