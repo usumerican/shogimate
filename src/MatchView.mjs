@@ -1,15 +1,19 @@
 import BrowseView from './BrowseView.mjs';
 import ConfirmView from './ConfirmView.mjs';
 import MenuView from './MenuView.mjs';
+import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setTextareaValue } from './browser.mjs';
 import {
   formatGameUsiFromLastStep,
   formatPvMoveUsis,
   formatPvScoreValue,
+  formatStep,
   parseMoveUsi,
   parsePvInfoUsi,
   parsePvScore,
+  sideInfos,
+  usiEndNameMap,
 } from './shogi.mjs';
 
 export default class MatchView {
@@ -50,28 +54,33 @@ export default class MatchView {
         if (step.parent && this.isSideAuto(step)) {
           step = step.parent;
         }
-        this.step = step;
-        this.update();
+        this.changeStep(step);
         this.think();
       }
     });
 
     on(this.el.querySelector('.HintButton'), 'click', async () => {
-      const targetStep = this.step;
-      targetStep.hint = await this.analyze(targetStep, 1000);
-      if (targetStep.hint) {
-        targetStep.hint.text =
-          '#ヒント[' +
-          formatPvScoreValue(targetStep.hint.scoreValue) +
-          '] ' +
-          formatPvMoveUsis(targetStep, targetStep.hint.pv).join(' ');
+      const progressView = new ProgressView(this.app);
+      progressView.show('考え中', '#fff6');
+      try {
+        const targetStep = this.step;
+        targetStep.hint = await this.analyze(targetStep, 1000);
+        if (targetStep.hint) {
+          targetStep.hint.text =
+            '#ヒント[' +
+            formatPvScoreValue(targetStep.hint.scoreValue) +
+            '] ' +
+            formatPvMoveUsis(targetStep, targetStep.hint.pv).join(' ');
+        }
+        this.updateHint();
+      } finally {
+        progressView.hide();
       }
-      this.update();
     });
 
     on(this.el.querySelector('.ResignButton'), 'click', async () => {
       if (await new ConfirmView(this.app).show('投了しますか?', ['いいえ', 'はい'])) {
-        this.step = this.step.appendEnd('投了');
+        this.changeStep(this.step.appendEnd('投了'));
         this.doBrowse();
       }
     });
@@ -80,9 +89,9 @@ export default class MatchView {
   show(title, game) {
     this.title = this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
-    this.step = this.game.startStep;
-    this.update();
+    this.changeStep(this.game.startStep);
     this.app.pushView(this);
+    this.app.initAudio();
     this.think();
   }
 
@@ -94,44 +103,56 @@ export default class MatchView {
     return !this.isSideAuto() && !this.step.endName;
   }
 
-  onStepAfter(step) {
+  onMove(move) {
+    const step = this.step.appendMove(move);
     this.app.playPieceSound();
-    this.step = step;
-    this.update();
+    this.app.speakMoveText(formatStep(step));
+    this.changeStep(step);
     this.think();
   }
 
-  update() {
+  changeStep(step) {
+    this.step = step;
     this.shogiPanel.changeStep(this.step);
+    this.updateHint();
+  }
+
+  updateHint() {
     this.shogiPanel.bestMove = this.step.hint?.bestMove || 0;
     setTextareaValue(this.hintOutput, this.step.hint?.text || '');
     this.shogiPanel.request();
   }
 
   async think() {
-    const targetStep = this.step;
-    targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
-    targetStep.fromToMap = await this.app.engine.getFromToMap(targetStep.gameUsi);
-    if (!targetStep.fromToMap.size) {
-      await this.endGame(targetStep, '詰み');
-      return;
-    }
-    targetStep.analysis = await this.analyze(targetStep, 500);
-    if (this.isSideAuto()) {
-      const moveUsi = (
-        await Promise.all([
-          this.app.engine.bestmove(targetStep.gameUsi, 100, this.game.level),
-          new Promise((resolve) => setTimeout(resolve, 100)),
-        ])
-      )[0];
-      if (moveUsi) {
-        const step = targetStep.appendMoveUsi(moveUsi);
-        if (step.endName) {
-          await this.endGame(targetStep, step.endName);
-          return;
-        }
-        this.onStepAfter(step);
+    const progressView = new ProgressView(this.app);
+    progressView.show();
+    try {
+      const targetStep = this.step;
+      targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
+      targetStep.fromToMap = await this.app.engine.getFromToMap(targetStep.gameUsi);
+      if (!targetStep.fromToMap.size) {
+        await this.endGame(targetStep, '詰み');
+        return;
       }
+      targetStep.analysis = await this.analyze(targetStep, 500);
+      if (this.isSideAuto()) {
+        const moveUsi = (
+          await Promise.all([
+            this.app.engine.bestmove(targetStep.gameUsi, 100, this.game.level),
+            new Promise((resolve) => setTimeout(resolve, 100)),
+          ])
+        )[0];
+        if (moveUsi) {
+          const move = parseMoveUsi(moveUsi);
+          if (move) {
+            this.onMove(move);
+          } else {
+            await this.endGame(targetStep, usiEndNameMap.get(moveUsi) || moveUsi);
+          }
+        }
+      }
+    } finally {
+      progressView.hide();
     }
   }
 
@@ -151,8 +172,11 @@ export default class MatchView {
   }
 
   async endGame(step, endName) {
-    await new ConfirmView(this.app).show(`${this.game.sideNames[step.position.sideToMove]}の${endName}です。`, ['OK']);
-    this.step = step.appendEnd(endName);
+    await new ConfirmView(this.app).show(
+      `${sideInfos[step.position.sideToMove].char}${this.game.sideNames[step.position.sideToMove]}の${endName}です。`,
+      ['OK']
+    );
+    this.changeStep(step.appendEnd(endName));
     this.doBrowse();
   }
 

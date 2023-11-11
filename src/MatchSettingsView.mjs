@@ -4,7 +4,7 @@ import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { parseGameUsi, sideInfos, startInfos, startNameSfenMap } from './shogi.mjs';
+import { parseGameUsi, sideInfos, sideN, startInfos, startNameSfenMap } from './shogi.mjs';
 
 export default class MatchSettingsView {
   constructor(app) {
@@ -71,7 +71,10 @@ export default class MatchSettingsView {
       } else {
         const side = Math.floor(Math.random() * 2);
         if (
-          !(await new ConfirmView(this.app).show(`あなたは${this.game.sideNames[side]}です。`, ['キャンセル', 'OK']))
+          !(await new ConfirmView(this.app).show(`あなたは${this.autoSelect.options[side + 1].text}です。`, [
+            'キャンセル',
+            'OK',
+          ]))
         ) {
           return;
         }
@@ -120,8 +123,10 @@ export default class MatchSettingsView {
     );
     this.game.flipped = +this.autoSelect.value === 1 ? 1 : 0;
     const key = this.startSelect.selectedIndex ? 'alias' : 'name';
-    this.game.sideNames[0] = this.autoSelect.options[1].text = sideInfos[0][key];
-    this.game.sideNames[1] = this.autoSelect.options[2].text = sideInfos[1][key];
+    for (let side = 0; side < sideN; side++) {
+      this.autoSelect.options[side + 1].text =
+        sideInfos[side].char + (this.game.sideNames[side] = sideInfos[side][key]);
+    }
     this.shogiPanel.step = this.game.startStep;
     this.shogiPanel.request();
   }

@@ -6,32 +6,35 @@ export const sideInfos = [
 
 export const colN = 9;
 export const colInfos = [
-  { name: '９', char: '9' },
-  { name: '８', char: '8' },
-  { name: '７', char: '7' },
-  { name: '６', char: '6' },
-  { name: '５', char: '5' },
-  { name: '４', char: '4' },
-  { name: '３', char: '3' },
-  { name: '２', char: '2' },
-  { name: '１', char: '1' },
+  { name: '９', char: '9', phoneme: 'きゅう' },
+  { name: '８', char: '8', phoneme: 'はち' },
+  { name: '７', char: '7', phoneme: 'なな' },
+  { name: '６', char: '6', phoneme: 'ろく' },
+  { name: '５', char: '5', phoneme: 'ごぉ' },
+  { name: '４', char: '4', phoneme: 'よん' },
+  { name: '３', char: '3', phoneme: 'さん' },
+  { name: '２', char: '2', phoneme: 'にぃ' },
+  { name: '１', char: '1', phoneme: 'いち' },
 ];
 export const textColMap = colInfos.reduce((map, info, col) => map.set(info.name, col).set(info.char, col), new Map());
 export const charColMap = colInfos.reduce((map, info, col) => map.set(info.char, col), new Map());
 
 export const rowN = 9;
 export const rowInfos = [
-  { name: '一', char: '1', usi: 'a' },
-  { name: '二', char: '2', usi: 'b' },
-  { name: '三', char: '3', usi: 'c' },
-  { name: '四', char: '4', usi: 'd' },
-  { name: '五', char: '5', usi: 'e' },
-  { name: '六', char: '6', usi: 'f' },
-  { name: '七', char: '7', usi: 'g' },
-  { name: '八', char: '8', usi: 'h' },
-  { name: '九', char: '9', usi: 'i' },
+  { name: '一', alias: '１', char: '1', phoneme: 'いち', usi: 'a' },
+  { name: '二', alias: '２', char: '2', phoneme: 'にぃ', usi: 'b' },
+  { name: '三', alias: '３', char: '3', phoneme: 'さん', usi: 'c' },
+  { name: '四', alias: '４', char: '4', phoneme: 'よん', usi: 'd' },
+  { name: '五', alias: '５', char: '5', phoneme: 'ごぉ', usi: 'e' },
+  { name: '六', alias: '６', char: '6', phoneme: 'ろく', usi: 'f' },
+  { name: '七', alias: '７', char: '7', phoneme: 'なな', usi: 'g' },
+  { name: '八', alias: '８', char: '8', phoneme: 'はち', usi: 'h' },
+  { name: '九', alias: '９', char: '9', phoneme: 'きゅう', usi: 'i' },
 ];
-export const textRowMap = rowInfos.reduce((map, info, row) => map.set(info.name, row).set(info.char, row), new Map());
+export const textRowMap = rowInfos.reduce(
+  (map, info, row) => map.set(info.name, row).set(info.alias, row).set(info.char, row),
+  new Map()
+);
 export const usiRowMap = rowInfos.reduce((map, info, row) => map.set(info.usi, row), new Map());
 
 export const squareN = colN * rowN;
@@ -110,11 +113,12 @@ export function isPiecePromotable(piece, fromRow, toRow) {
 }
 
 export const kindInfos = [
-  null,
-  { name: '歩', usi: 'P', neighbors: [[0, -1]], directions: [] },
-  { name: '香', usi: 'L', neighbors: [], directions: [[0, -1]] },
+  { name: '', phoneme: '', usi: '', neighbors: [], directions: [] },
+  { name: '歩', phoneme: 'ふぅ', usi: 'P', neighbors: [[0, -1]], directions: [] },
+  { name: '香', phoneme: 'きょう', usi: 'L', neighbors: [], directions: [[0, -1]] },
   {
     name: '桂',
+    phoneme: 'けい',
     usi: 'N',
     neighbors: [
       [-1, -2],
@@ -124,6 +128,7 @@ export const kindInfos = [
   },
   {
     name: '銀',
+    phoneme: 'ぎん',
     usi: 'S',
     neighbors: [
       [-1, -1],
@@ -136,6 +141,7 @@ export const kindInfos = [
   },
   {
     name: '角',
+    phoneme: 'かく',
     usi: 'B',
     neighbors: [],
     directions: [
@@ -147,6 +153,7 @@ export const kindInfos = [
   },
   {
     name: '飛',
+    phoneme: 'ひぃ',
     usi: 'R',
     neighbors: [],
     directions: [
@@ -158,6 +165,7 @@ export const kindInfos = [
   },
   {
     name: '金',
+    phoneme: 'きん',
     usi: 'G',
     neighbors: [
       [-1, -1],
@@ -171,6 +179,7 @@ export const kindInfos = [
   },
   {
     name: '玉',
+    phoneme: 'ぎょく',
     usi: 'K',
     neighbors: [
       [-1, -1],
@@ -186,6 +195,7 @@ export const kindInfos = [
   },
   {
     name: 'と',
+    phoneme: 'とぉ',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -199,6 +209,7 @@ export const kindInfos = [
   {
     name: '成香',
     char: '杏',
+    phoneme: 'なりきょう',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -212,6 +223,7 @@ export const kindInfos = [
   {
     name: '成桂',
     char: '圭',
+    phoneme: 'なりけい',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -225,6 +237,7 @@ export const kindInfos = [
   {
     name: '成銀',
     char: '全',
+    phoneme: 'なりぎん',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -237,6 +250,7 @@ export const kindInfos = [
   },
   {
     name: '馬',
+    phoneme: 'うま',
     neighbors: [
       [-1, 0],
       [0, -1],
@@ -252,6 +266,7 @@ export const kindInfos = [
   },
   {
     name: '龍',
+    phoneme: 'りゅう',
     neighbors: [
       [-1, -1],
       [-1, 1],
@@ -273,18 +288,28 @@ export const kindInfos = [
   arr.push(info);
   return arr;
 }, []);
-export const kindNames = kindInfos.map((info) => info?.name || '');
+export const kindNames = kindInfos.map((info) => info.name);
 export const textKindMap = kindInfos.reduce(
-  (map, info, kind) => (info && map.set(info.name, kind).set(info.char, kind), map),
+  (map, info, kind) => {
+    if (info.name) {
+      map.set(info.name, kind);
+    }
+    if (info.char) {
+      map.set(info.char, kind);
+    }
+    return map;
+  },
   new Map([
     ['王', 8],
     ['成歩', 9],
+    ['成角', 13],
+    ['成飛', 14],
     ['竜', 14],
   ])
 );
 
 export const pieceInfos = kindInfos.reduce((arr, info, kind) => {
-  if (info) {
+  if (kind) {
     arr[kind] = info;
     const pieceInfo = Object.assign({}, info);
     pieceInfo.usi = info.usi.toLowerCase();
@@ -299,7 +324,6 @@ export const usiPieceMap = pieceInfos.reduce((map, info, piece) => (map.set(info
 export const handBaseN = 7;
 export const handBases = [ROOK, BISHOP, GOLD, SILVER, KNIGHT, LANCE, PAWN];
 export const handOrderMap = handBases.reduce((map, base, order) => (map.set(base, order), map), new Map());
-
 export const countNames = [
   '〇',
   '一',
@@ -468,27 +492,43 @@ export function walkAttackers(pos, col, row, piece, callback) {
   return null;
 }
 
-function getHorizontalModifier(h, side) {
+export const modifierInfos = [
+  { name: '同', phoneme: 'どう' },
+  { name: '左', phoneme: 'ひだり' },
+  { name: '直', phoneme: 'すぐ' },
+  { name: '右', phoneme: 'みぎ' },
+  { name: '上', phoneme: 'あがる' },
+  { name: '寄', phoneme: 'よる' },
+  { name: '引', phoneme: 'ひく' },
+  { name: '打', phoneme: 'うつ' },
+  { name: '不成', phoneme: 'ならず' },
+  { name: '成', phoneme: 'なり' },
+];
+export const textModifierMap = modifierInfos.reduce((map, info, modifier) => map.set(info.name, modifier), new Map());
+
+function getHorizontalModifier(dc, side) {
   if (side) {
-    h = -h;
+    dc = -dc;
   }
-  return h < 0 ? '右' : h > 0 ? '左' : '直';
+  return dc > 0 ? '左' : dc < 0 ? '右' : '直';
 }
 
-function getVerticalModifier(v, side) {
+function getVerticalModifier(dr, side) {
   if (side) {
-    v = -v;
+    dr = -dr;
   }
-  return v < 0 ? '上' : v > 0 ? '引' : '寄';
+  return dr > 0 ? '引' : dr < 0 ? '上' : '寄';
 }
 
-export function formatMoveModifier(pos, move) {
+export function getMoveModifiers(pos, move) {
+  const modifiers = [];
   const from = getMoveFrom(move);
   const to = getMoveTo(move);
   const toCol = getCol(to);
   const toRow = getRow(to);
   if (isMoveDropped(move)) {
-    return walkAttackers(pos, toCol, toRow, makePiece(from, pos.sideToMove), () => '打') || '';
+    walkAttackers(pos, toCol, toRow, makePiece(from, pos.sideToMove), () => modifiers.push('打'));
+    return modifiers;
   }
   const piece = pos.getPiece(from);
   const fromCol = getCol(from);
@@ -509,32 +549,31 @@ export function formatMoveModifier(pos, move) {
       }
     }
   });
-  let modifier = '';
   if (~attacker) {
     if (vc) {
       if (hc) {
         if (hm === '直') {
-          modifier = '直';
+          modifiers.push('直');
         } else {
-          modifier = hm + vm;
+          modifiers.push(hm, vm);
         }
       } else {
         if (hm === '直' && getPieceKind(piece) >= HORSE) {
-          modifier = getHorizontalModifier(getCol(attacker) - fromCol, pos.sideToMove);
+          modifiers.push(getHorizontalModifier(getCol(attacker) - fromCol, pos.sideToMove));
         } else {
-          modifier = hm;
+          modifiers.push(hm);
         }
       }
     } else {
-      modifier = vm;
+      modifiers.push(vm);
     }
   }
   if (isMovePromoted(move)) {
-    modifier += '成';
+    modifiers.push('成');
   } else if (isPiecePromotable(piece, fromRow, toRow)) {
-    modifier += '不成';
+    modifiers.push('不成');
   }
-  return modifier;
+  return modifiers;
 }
 
 export function formatMoveText(pos, move, lastMove) {
@@ -543,8 +582,35 @@ export function formatMoveText(pos, move, lastMove) {
   return (
     (lastMove && getMoveTo(lastMove) === to ? '同' : colInfos[getCol(to)].name + rowInfos[getRow(to)].name) +
     kindNames[isMoveDropped(move) ? from : getPieceKind(pos.getPiece(from))] +
-    formatMoveModifier(pos, move)
+    getMoveModifiers(pos, move).join('')
   );
+}
+
+const colPattern = [...textColMap.keys()].join('|');
+const rowPattern = [...textRowMap.keys()].join('|');
+const kindPattern = [...textKindMap.keys()].join('|');
+const moveTextRegExp = new RegExp(
+  String.raw`(${colPattern})?(${rowPattern})?(?:(同)\s*)?(${kindPattern})(?:(打)|(左|直|右)?(上|寄|引)?(不成|成)?)`
+);
+const textPhonemeMap = new Map([
+  ...[...textColMap].map(([text, col]) => [text, colInfos[col].phoneme]),
+  ...[...textRowMap].map(([text, row]) => [text, rowInfos[row].phoneme]),
+  ...[...textKindMap].map(([text, kind]) => [text, kindInfos[kind].phoneme]),
+  ...modifierInfos.map((info) => [info.name, info.phoneme]),
+]);
+
+export function getMovePhonemes(moveText) {
+  const phonemes = [];
+  const found = moveText.match(moveTextRegExp);
+  if (found) {
+    for (let i = 1; i < found.length; i++) {
+      const text = found[i];
+      if (text) {
+        phonemes.push(textPhonemeMap.get(text));
+      }
+    }
+  }
+  return phonemes;
 }
 
 export function formatMoveKif(pos, move, lastMove) {
@@ -765,7 +831,7 @@ export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set
 export class Step {
   constructor({ parent, children, move, position, capturedPiece, endName } = {}) {
     this.parent = parent;
-    this.children = children ? children.slice() : [];
+    this.children = children?.slice() || [];
     this.move = move || 0;
     this.position = position;
     this.capturedPiece = capturedPiece || 0;
@@ -836,16 +902,8 @@ export class Game {
   constructor({ startStep, flipped, sideNames } = {}) {
     this.startStep = startStep;
     this.flipped = flipped || 0;
-    this.sideNames = sideNames ? sideNames.slice(0) : ['', ''];
+    this.sideNames = sideNames?.slice() || ['', ''];
   }
-}
-
-export function formatMoveUsis(step) {
-  const moveUsis = [];
-  for (let st = step.children[0]; st && st.move; st = st.children[0]) {
-    moveUsis.push(formatMoveUsi(st.move));
-  }
-  return moveUsis;
 }
 
 export function makePositionCommand(sfen, moveUsis) {
@@ -857,19 +915,22 @@ export function makePositionCommand(sfen, moveUsis) {
 }
 
 export function formatGameUsi(game) {
-  return makePositionCommand(formatSfen(game.startStep.position), formatMoveUsis(game.startStep));
+  const moveUsis = [];
+  for (let st = game.startStep.children[0]; st && st.move; st = st.children[0]) {
+    moveUsis.push(formatMoveUsi(st.move));
+  }
+  return makePositionCommand(formatSfen(game.startStep.position), moveUsis);
 }
 
 export function formatGameUsiFromLastStep(lastStep) {
   const moveUsis = [];
-  let step = lastStep;
-  while (step.parent) {
-    if (step.move) {
-      moveUsis.unshift(formatMoveUsi(step.move));
+  let st = lastStep;
+  for (; st.parent; st = st.parent) {
+    if (st.move) {
+      moveUsis.unshift(formatMoveUsi(st.move));
     }
-    step = step.parent;
   }
-  return makePositionCommand(formatSfen(step.position), moveUsis);
+  return makePositionCommand(formatSfen(st.position), moveUsis);
 }
 
 export function parseGameUsi(gameUsi) {

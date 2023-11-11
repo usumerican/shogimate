@@ -6,7 +6,7 @@ export default class ProgressView {
     this.el = parseHtml(`<div class="ProgressView Center"></div>`);
   }
 
-  show(message = '処理中', background = '#fff6', time) {
+  show(message, background, time) {
     this.el.textContent = message;
     this.el.style.background = background;
     this.app.pushView(this);

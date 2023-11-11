@@ -158,7 +158,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: $rowH $toolH 1fr $toolH $toolH;
+    grid-template-rows: $toolH 1fr $toolH $toolH;
     place-items: stretch;
 
     .ShogiPanel {

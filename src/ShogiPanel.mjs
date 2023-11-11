@@ -133,13 +133,13 @@ export default class ShogiPanel {
     if (this.nextToMap?.has(sq)) {
       const nextFrom = getMoveFrom(this.nextMove);
       if (isMoveDropped(this.nextMove)) {
-        await this.doStep(this.step.appendMove(makeDrop(nextFrom, sq)));
+        this.handler?.onMove(makeDrop(nextFrom, sq));
       } else {
         let promoted = this.nextToMap.get(sq) - 1;
         if (promoted === 2) {
           promoted = await new ConfirmView(this.app).show('成りますか?', ['成らない', '成る']);
         }
-        await this.doStep(this.step.appendMove(makeMove(nextFrom, sq, promoted)));
+        this.handler?.onMove(makeMove(nextFrom, sq, promoted));
       }
     } else if (this.nextMove && !isMoveDropped(this.nextMove) && getMoveFrom(this.nextMove) === sq) {
       this.resetNext();
@@ -169,11 +169,6 @@ export default class ShogiPanel {
       this.nextToMap = this.step.fromToMap?.get(this.nextMove);
     }
     this.request();
-  }
-
-  doStep(step) {
-    this.changeStep(step);
-    this.handler.onStepAfter?.(step);
   }
 
   changeStep(step) {

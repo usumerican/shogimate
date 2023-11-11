@@ -22,6 +22,7 @@ import {
   makeDrop,
   makeSquare,
   makeMove,
+  getMovePhonemes,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -379,5 +380,10 @@ describe('shogi', () => {
       expect(formatMoveText(pos, makeMove(makeSquare(4, 5), makeSquare(4, 6)), lastMove)).toEqual('同金');
       expect(formatMoveText(pos, makeMove(makeSquare(5, 5), makeSquare(4, 6)), lastMove)).toEqual('同成銀');
     });
+  });
+
+  test('getMovePhonemes', () => {
+    expect(getMovePhonemes('☗３一銀左上不成')).toEqual(['さん', 'いち', 'ぎん', 'ひだり', 'あがる', 'ならず']);
+    expect(getMovePhonemes('☖同成銀右寄')).toEqual(['どう', 'なりぎん', 'みぎ', 'よる']);
   });
 });
