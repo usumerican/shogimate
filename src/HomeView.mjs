@@ -8,6 +8,7 @@ import { on, openUrl, parseHtml, setSelectValue } from './browser.mjs';
 
 export default class HomeView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
       <div class="HomeView">
         <div class="TitleOutput Center"></div>
@@ -25,7 +26,6 @@ export default class HomeView {
         </div>
       </div>
     `);
-    this.app = app;
     this.el.querySelector('.TitleOutput').textContent = `${this.app.title} ${this.app.version}`;
     this.bookSelect = this.el.querySelector('.BookSelect');
     this.volumeSelect = this.el.querySelector('.VolumeSelect');

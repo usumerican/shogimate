@@ -1,4 +1,6 @@
-import { describe, expect, test } from 'vitest';
+/* eslint-disable no-irregular-whitespace */
+
+import { beforeAll, describe, expect, test } from 'vitest';
 import {
   formatGameUsi,
   formatGameUsiFromLastStep,
@@ -23,6 +25,8 @@ import {
   makeSquare,
   makeMove,
   getMovePhonemes,
+  formatGameKif,
+  formatGameKi2,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -46,7 +50,6 @@ describe('shogi', () => {
 | 香 桂 銀 金 玉 金 銀 桂 香|九
 +---------------------------+
 先手の持駒：なし
-手数＝0
 先手番
 `,
       },
@@ -66,7 +69,6 @@ describe('shogi', () => {
 | 香 桂 銀 金 玉 金 銀 桂 香|九
 +---------------------------+
 下手の持駒：なし
-手数＝0
 上手番
 `,
         sideNames: ['下手', '上手'],
@@ -93,7 +95,8 @@ describe('shogi', () => {
       },
     ];
     for (const { sfen, bod, sideNames } of data) {
-      expect(formatBod(parseSfen(sfen), sideNames)).toEqual(bod);
+      const pos = parseSfen(sfen);
+      expect(formatBod(pos, sideNames, pos.number)).toEqual(bod);
       expect(formatSfen(parseBod(bod))).toEqual(sfen);
     }
   });
@@ -147,7 +150,7 @@ describe('shogi', () => {
     step = step.appendMoveUsi('B*3c');
     expect(formatStep(step)).toEqual('☗３三角');
     step = step.appendMoveUsi('resign');
-    expect(formatStep(step)).toEqual('☖投　了');
+    expect(formatStep(step)).toEqual('☖投了');
   });
 
   test('parsePvInfoUsi', () => {
@@ -385,5 +388,55 @@ describe('shogi', () => {
   test('getMovePhonemes', () => {
     expect(getMovePhonemes('☗３一銀左上不成')).toEqual(['さん', 'いち', 'ぎん', 'ひだり', 'あがる', 'ならず']);
     expect(getMovePhonemes('☖同成銀右寄')).toEqual(['どう', 'なりぎん', 'みぎ', 'よる']);
+  });
+
+  describe('format game', () => {
+    const game = parseGameUsi(
+      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1 moves 3c3d 7g7f 2b8h 4i5h B*7g 8i7g'
+    );
+
+    beforeAll(() => {
+      game.startName = '香落ち';
+      game.sideNames = ['下手', '上手'];
+      game.playerNames = ['Black', 'White'];
+      game.startStep.children[0].children[0].children[0].children[0].children[0].children[0].appendEnd('中断');
+      game.startStep.children[0].children[0]
+        .appendMoveUsi('2b8h+')
+        .appendMoveUsi('6i5h')
+        .appendMoveUsi('B*7g')
+        .appendEnd('投了');
+    });
+
+    test('kif', () => {
+      expect(formatGameKif(game)).toEqual(`手合割：香落ち
+下手：Black
+上手：White
+手数----指手---------消費時間--
+1 ３四歩(33)
+2 ７六歩(77)
+3 ８八角(22)
+4 ５八金(49)
+5 ７七角打
+6 同　桂(89)
+7 中断
+
+変化：3手
+3 ８八角成(22)
+4 ５八金(69)
+5 ７七角打
+6 投了
+`);
+    });
+
+    test('ki2', () => {
+      expect(formatGameKi2(game)).toEqual(`手合割：香落ち
+下手：Black
+上手：White
+△３四歩 ▲７六歩 △８八角不成 ▲５八金右 △７七角打 ▲同　桂
+
+変化：3手
+△８八角成 ▲５八金左 △７七角
+`);
+    });
   });
 });

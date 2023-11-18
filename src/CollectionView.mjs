@@ -1,13 +1,14 @@
 /* eslint-env browser */
 
 import ConfirmView from './ConfirmView.mjs';
-import ExportView from './ExportView.mjs';
-import ImportView from './ImportView.mjs';
+import CollectionExportView from './CollectionExportView.mjs';
+import CollectionImportView from './CollectionImportView.mjs';
 import QuestionView from './QuestionView.mjs';
 import { on, parseHtml } from './browser.mjs';
 
 export default class CollectionView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
       <div class="CollectionView">
         <div class="Center">コレクション</div>
@@ -22,7 +23,6 @@ export default class CollectionView {
         <button class="ChallengeButton">チャレンジ</button>
       </div>
     `);
-    this.app = app;
     this.exportButton = this.el.querySelector('.ExportButton');
     this.startButton = this.el.querySelector('.StartButton');
     this.challengeButton = this.el.querySelector('.ChallengeButton');
@@ -85,7 +85,7 @@ export default class CollectionView {
     });
 
     on(this.el.querySelector('.ImportButton'), 'click', async () => {
-      if (await new ImportView(this.app).show()) {
+      if (await new CollectionImportView(this.app).show()) {
         this.updateCounts();
       }
     });
@@ -97,7 +97,7 @@ export default class CollectionView {
           records.push(...item.records);
         }
       }
-      new ExportView(this.app).show(records);
+      new CollectionExportView(this.app).show(records);
     });
 
     on(this.startButton, 'click', () => {

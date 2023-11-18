@@ -258,7 +258,6 @@ export default class App {
 
   async writeToClipboard(text) {
     await navigator.clipboard.writeText(text);
-    console.log(text);
     await new ConfirmView(this).show('クリップボードにコピーしました。', ['OK']);
   }
 

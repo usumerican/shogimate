@@ -4,6 +4,7 @@ import { on, parseHtml } from './browser.mjs';
 
 export default class ConfirmView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
       <div class="ConfirmView">
         <div class="Content">
@@ -12,7 +13,6 @@ export default class ConfirmView {
         </div>
       </div>
     `);
-    this.app = app;
     this.messageOutput = this.el.querySelector('.MessageOutput');
     this.itemList = this.el.querySelector('.ItemList');
   }

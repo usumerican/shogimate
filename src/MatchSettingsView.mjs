@@ -4,7 +4,7 @@ import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { parseGameUsi, sideInfos, sideN, startInfos, startNameSfenMap } from './shogi.mjs';
+import { parseGameUsi, sideInfos, sides, startInfos, startNameSfenMap } from './shogi.mjs';
 
 export default class MatchSettingsView {
   constructor(app) {
@@ -83,6 +83,10 @@ export default class MatchSettingsView {
       this.game.startName = this.startSelect.value;
       this.game.level = +this.levelSelect.value;
       this.game.flipped = this.game.auto === 1 ? 1 : 0;
+      for (const side of sides) {
+        this.game.playerNames[side] =
+          (1 << side) & this.game.auto ? this.levelSelect.selectedOptions[0].text : 'あなた';
+      }
       if (!this.temporary) {
         this.app.settings.match = {
           positionSpecified: this.positionSpecifiedCheckbox.checked,
@@ -94,10 +98,7 @@ export default class MatchSettingsView {
         this.app.saveSettings();
       }
       this.hide();
-      new MatchView(this.app).show(
-        auto ? this.levelSelect.selectedOptions[0].text : this.autoSelect.selectedOptions[0].text,
-        this.game
-      );
+      new MatchView(this.app).show('対局', this.game);
     });
   }
 
@@ -123,7 +124,7 @@ export default class MatchSettingsView {
     );
     this.game.flipped = +this.autoSelect.value === 1 ? 1 : 0;
     const key = this.startSelect.selectedIndex ? 'alias' : 'name';
-    for (let side = 0; side < sideN; side++) {
+    for (const side of sides) {
       this.autoSelect.options[side + 1].text =
         sideInfos[side].char + (this.game.sideNames[side] = sideInfos[side][key]);
     }

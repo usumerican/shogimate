@@ -12,8 +12,6 @@ import {
   parseMoveUsi,
   formatPvMoveUsis,
   Game,
-  formatSfen,
-  parseGameUsi,
   parsePvScore,
   formatPvScoreValue,
   formatStep,
@@ -140,7 +138,7 @@ export default class ResearchView {
         row.pvOutput = row.querySelector('.PvOutput');
         on(row, 'click', () => {
           const game = new Game(this.game);
-          let st = (game.startStep = parseGameUsi(formatSfen(targetStep.position)).startStep);
+          let st = (game.startStep = new Step({ position: targetStep.position }));
           for (const moveUsi of row.moveUsis) {
             st = st.appendMoveUsi(moveUsi);
           }

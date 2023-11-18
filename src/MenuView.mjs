@@ -4,6 +4,7 @@ import { on, parseHtml } from './browser.mjs';
 
 export default class MenuView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
       <div class="MenuView">
         <div class="Content">
@@ -12,7 +13,6 @@ export default class MenuView {
         </div>
       </div>
     `);
-    this.app = app;
     this.messageOutput = this.el.querySelector('.MessageOutput');
     this.itemList = this.el.querySelector('.ItemList');
 

@@ -1,13 +1,12 @@
 /* eslint-env browser */
 
 import ConfirmView from './ConfirmView.mjs';
+import ExportView from './ExportView.mjs';
 import SettingsView from './SettingsView.mjs';
 import { on } from './browser.mjs';
 import {
   colInfos,
   colN,
-  formatGameUsi,
-  formatSfen,
   getCol,
   getMoveFrom,
   getMoveTo,
@@ -27,7 +26,7 @@ import {
   rowInfos,
   rowN,
   sideInfos,
-  sideN,
+  sides,
   squareN,
 } from './shogi.mjs';
 
@@ -56,6 +55,10 @@ export default class ShogiPanel {
       [this.squareW * -4.25, this.squareH * 5.5],
       [this.squareW * 4.25, this.squareH * -5.5],
     ];
+    this.playerPoints = [
+      [this.squareW * 4.5, this.squareH * 6.25],
+      [this.squareW * -4.5, this.squareH * -6.25],
+    ];
     const tana = Math.tan((81 / 180) * Math.PI);
     const tanc = Math.tan((72 / 180) * Math.PI);
     this.baseShapes = [
@@ -76,8 +79,9 @@ export default class ShogiPanel {
       return { ax, ay, bx, by, font: base ? `${fontSize}px serif` : `bold ${fontSize}px sans-serif` };
     });
     this.shapeTy = this.squareH * 0.05;
-    this.sideFont = ~~(this.squareW * 0.8) + 'px serif';
-    this.countFont = ~~(this.squareW * 0.4) + 'px sans-serif';
+    this.sideFont = ~~(this.squareW * 0.8) + 'px sans-serif';
+    this.countFont = 'bold ' + ~~(this.squareW * 0.4) + 'px sans-serif';
+    this.playerFont = ~~(this.squareW * 0.4) + 'px sans-serif';
     this.addrFont = ~~(this.squareW * 0.3) + 'px sans-serif';
     this.matrix = [1, 0, 0, 1, 0, 0];
     this.lastFrameTime = 0;
@@ -116,7 +120,7 @@ export default class ShogiPanel {
         makeSquare(Math.floor((x - this.boardX) / this.squareW), Math.floor((y - this.boardY) / this.squareH))
       );
     } else {
-      for (let side = 0; side < sideN; side++) {
+      for (const side of sides) {
         const [hx, hy, hw, hh] = this.handRects[side];
         if (this.rectContains(hx, hy, hw, hh, x, y)) {
           this.doHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)]);
@@ -275,21 +279,26 @@ export default class ShogiPanel {
 
     context.lineWidth = 4;
     context.strokeRect(this.boardX, this.boardY, this.boardW, this.boardH);
-    for (let side = 0; side < sideN; side++) {
+    context.font = this.sideFont;
+    for (const side of sides) {
       context.strokeRect(...this.handRects[side]);
       const [sx, sy] = this.sidePoints[side];
       context.strokeRect(sx, sy, this.squareW, this.squareH);
-      context.font = this.sideFont;
       this.renderText(context, sideInfos[side].char, sx + this.squareW / 2, sy + this.squareH / 2, side);
-      context.font = this.countFont;
-      this.renderText(
-        context,
-        this.game.sideNames[side],
-        sx + this.squareW / 2,
-        sy + this.squareH * (side ? -0.25 : 1.25),
-        this.game.flipped
-      );
-      this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.flipped);
+    }
+
+    context.font = this.playerFont;
+    for (const side of sides) {
+      if (this.clocks[side]) {
+        this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.flipped);
+      }
+    }
+    for (const side of sides) {
+      const playerTitle = (this.game.sideNames[side] + ' ' + this.game.playerNames[side]).trim();
+      if (playerTitle) {
+        context.textAlign = side ^ this.game.flipped ? 'left' : 'right';
+        this.renderText(context, playerTitle, ...this.playerPoints[side], this.game.flipped);
+      }
     }
 
     for (const sq of [30, 33, 57, 60]) {
@@ -306,7 +315,7 @@ export default class ShogiPanel {
       }
     }
 
-    for (let side = 0; side < sideN; side++) {
+    for (const side of sides) {
       for (const base of handBases) {
         const [x, y] = this.getHandPoint(side, base);
         const handCount = this.step.position.getHandCount(side, base);
@@ -352,12 +361,6 @@ export default class ShogiPanel {
       const cos = side ? -1 : 1;
       context.transform(cos, 0, 0, cos, x + this.squareW / 2, y + this.squareH / 2);
 
-      if (count > 1) {
-        context.font = this.countFont;
-        context.fillStyle = '#000';
-        this.renderText(context, count, 0, this.squareH * 0.75, this.game.flipped ^ side);
-      }
-
       const { ax, ay, bx, by, font } = this.baseShapes[getPieceBase(kind)];
       context.beginPath();
       context.moveTo(0, -ay);
@@ -379,14 +382,35 @@ export default class ShogiPanel {
         : this.pieceStyle.textColors[side];
       const [ch0, ch1] = this.pieceTitleSet.titles[makePiece(kind, side)];
       if (ch1) {
-        context.scale(0.8, 0.6);
-        context.textBaseline = 'bottom';
-        context.fillText(ch0, 0, this.shapeTy);
-        context.textBaseline = 'top';
-        context.fillText(ch1, 0, this.shapeTy);
+        context.save();
+        try {
+          context.scale(0.8, 0.6);
+          context.textBaseline = 'bottom';
+          context.fillText(ch0, 0, this.shapeTy);
+          context.textBaseline = 'top';
+          context.fillText(ch1, 0, this.shapeTy);
+        } finally {
+          context.restore();
+        }
       } else {
         context.textBaseline = 'middle';
         context.fillText(ch0, 0, this.shapeTy);
+      }
+
+      if (count > 1) {
+        if (side ^ this.game.flipped) {
+          context.transform(-1, 0, 0, -1, 0, 0);
+        }
+        context.font = this.countFont;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        const cx = this.squareW * 0.25;
+        const cy = this.squareH * 0.25;
+        context.lineWidth = 8;
+        context.strokeStyle = '#000';
+        context.strokeText(count, cx, cy);
+        context.fillStyle = '#fff';
+        context.fillText(count, cx, cy);
       }
     } finally {
       context.restore();
@@ -446,15 +470,9 @@ export default class ShogiPanel {
         },
       },
       {
-        title: '棋譜のコピー (USI)',
+        title: '棋譜・局面の書き出し',
         callback: () => {
-          this.app.writeToClipboard(formatGameUsi(this.game));
-        },
-      },
-      {
-        title: '局面のコピー (SFEN)',
-        callback: () => {
-          this.app.writeToClipboard(formatSfen(this.step.position));
+          new ExportView(this.app).show(this.game, this.step);
         },
       },
       {

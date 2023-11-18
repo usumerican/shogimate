@@ -6,10 +6,20 @@ import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
-import { Step, formatStep, parseMoveUsi, usiEndNameMap, parseGameUsi, formatGameUsiFromLastStep } from './shogi.mjs';
+import {
+  Step,
+  formatStep,
+  parseMoveUsi,
+  usiEndNameMap,
+  parseGameUsi,
+  formatGameUsiFromLastStep,
+  Game,
+  Position,
+} from './shogi.mjs';
 
 export default class QuestionView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
       <div class="QuestionView">
         <div class="TitleBar">
@@ -32,7 +42,6 @@ export default class QuestionView {
         </div>
       </div>
     `);
-    this.app = app;
     this.titleOutput = this.el.querySelector('.TitleOutput');
     this.recordSelect = this.el.querySelector('.RecordSelect');
     this.recordPrevButton = this.el.querySelector('.RecordPrevButton');
@@ -87,7 +96,7 @@ export default class QuestionView {
     on(this.answerButton, 'click', () => {
       if (this.limit) {
         this.stopClock();
-        new BrowseView(this.app).show('解答例', this.game);
+        new BrowseView(this.app).show('解答例', this.answerGame);
       }
     });
 
@@ -183,19 +192,23 @@ export default class QuestionView {
     this.recordPrevButton.disabled = !this.canRecordPrev();
     this.recordNextButton.disabled = !this.canRecordNext();
     const [gameUsi, rate] = this.records[this.recordIndices[this.recordOrder]].split('\t');
-    this.game = parseGameUsi(gameUsi);
+    this.answerGame = parseGameUsi(gameUsi);
+    this.startSide = this.answerGame.startStep.position.sideToMove;
+    this.answerGame.flipped = this.startSide;
+    this.answerGame.playerNames[this.startSide] = '攻方';
+    this.answerGame.playerNames[this.startSide ^ 1] = '受方';
     this.limit = 0;
-    for (let st = this.game.startStep.children[0]; st && st.move; st = st.children[0]) {
+    for (let st = this.answerGame.startStep.children[0]; st && st.move; st = st.children[0]) {
       this.limit++;
     }
     this.answerButton.disabled = !this.limit;
     this.rate = rate;
     this.collectButton.disabled = this.rate;
-    this.startStep = new Step(this.game.startStep);
-    this.startSide = this.startStep.position.sideToMove;
-    this.game.flipped = this.startSide;
-    this.game.sideNames[this.startSide] = '攻方';
-    this.game.sideNames[this.startSide ^ 1] = '受方';
+    this.game = new Game(this.answerGame);
+    const position = new Position(this.answerGame.startStep.position);
+    position.number = 0;
+    this.startStep = new Step({ position });
+    this.game.startStep = this.startStep;
     this.shogiPanel.game = this.game;
     this.shogiPanel.clocks[this.startSide] = '';
     this.shogiPanel.clocks[this.startSide ^ 1] = '';
@@ -210,12 +223,14 @@ export default class QuestionView {
 
   doReset() {
     if (this.canReset()) {
+      this.step.appendEnd('中断');
       this.changeStep(this.startStep);
     }
   }
 
   doUndo() {
     if (this.canReset()) {
+      this.step.appendEnd('待った');
       let st = this.step.endName ? this.step.parent?.parent : this.step.parent;
       for (; st; st = st.parent) {
         if (st.position.sideToMove === this.startStep.position.sideToMove) {
@@ -260,7 +275,7 @@ export default class QuestionView {
     try {
       const manual = this.step.position.sideToMove === this.startSide;
       if (manual && this.isExceeded()) {
-        this.endGame('反則負け');
+        this.endGame('不詰');
         return;
       }
       this.step.gameUsi = formatGameUsiFromLastStep(this.step);
