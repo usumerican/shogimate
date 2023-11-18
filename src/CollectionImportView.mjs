@@ -4,10 +4,11 @@ import ConfirmView from './ConfirmView.mjs';
 import { on, parseHtml, setTextareaValue } from './browser.mjs';
 import { formatGameUsi, parseGameUsi } from './shogi.mjs';
 
-export default class ImportView {
+export default class CollectionImportView {
   constructor(app) {
+    this.app = app;
     this.el = parseHtml(`
-      <div class="ImportView">
+      <div class="CollectionImportView">
         <div class="Center">読み込み</div>
         <textarea class="TextInput" placeholder="SFEN moves MOVE1 MOVE2..."></textarea>
         <input class="FileInput" type="file" accept=".txt" />
@@ -18,7 +19,6 @@ export default class ImportView {
         </div>
       </div>
     `);
-    this.app = app;
     this.textInput = this.el.querySelector('.TextInput');
     this.fileInput = this.el.querySelector('.FileInput');
 

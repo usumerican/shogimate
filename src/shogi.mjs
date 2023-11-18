@@ -1,4 +1,5 @@
 export const sideN = 2;
+export const sides = [0, 1];
 export const sideInfos = [
   { name: '先手', alias: '下手', char: '☗', kif: '▲', usi: 'b' },
   { name: '後手', alias: '上手', char: '☖', kif: '△', usi: 'w' },
@@ -576,14 +577,15 @@ export function getMoveModifiers(pos, move) {
   return modifiers;
 }
 
-export function formatMoveText(pos, move, lastMove) {
+export function formatMoveText(pos, move, lastMove, padding) {
   const to = getMoveTo(move);
   const from = getMoveFrom(move);
-  return (
+  const text =
     (lastMove && getMoveTo(lastMove) === to ? '同' : colInfos[getCol(to)].name + rowInfos[getRow(to)].name) +
     kindNames[isMoveDropped(move) ? from : getPieceKind(pos.getPiece(from))] +
-    getMoveModifiers(pos, move).join('')
-  );
+    getMoveModifiers(pos, move).join('');
+
+  return padding && text.length === 2 ? text[0] + '　' + text.slice(1) : text;
 }
 
 const colPattern = [...textColMap.keys()].join('|');
@@ -677,7 +679,7 @@ export function formatSfen(pos) {
   }
   sfen += ' ' + sideInfos[pos.sideToMove].usi + ' ';
   let handsUsi = '';
-  for (let side = 0; side < sideN; side++) {
+  for (const side of sides) {
     for (const base of handBases) {
       const count = pos.getHandCount(side, base);
       if (count) {
@@ -744,7 +746,7 @@ function formatHandKif(pos, side) {
   return handKif || 'なし';
 }
 
-export function formatBod(pos, sideNames) {
+export function formatBod(pos, sideNames, number) {
   const sideName0 = sideNames?.[0] || sideInfos[0].name;
   const sideName1 = sideNames?.[1] || sideInfos[1].name;
   let bod =
@@ -761,19 +763,11 @@ export function formatBod(pos, sideNames) {
     }
     bod += '|' + rowInfos[row].name + '\n';
   }
-  return (
-    bod +
-    '+---------------------------+\n' +
-    sideName0 +
-    'の持駒：' +
-    formatHandKif(pos, 0) +
-    '\n' +
-    '手数＝' +
-    pos.number +
-    '\n' +
-    (pos.sideToMove ? sideName1 : sideName0) +
-    '番\n'
-  );
+  bod += '+---------------------------+\n' + sideName0 + 'の持駒：' + formatHandKif(pos, 0) + '\n';
+  if (number) {
+    bod += '手数＝' + pos.number + '\n';
+  }
+  return bod + (pos.sideToMove ? sideName1 : sideName0) + '番\n';
 }
 
 export function parseBod(bod) {
@@ -817,16 +811,28 @@ export function parseBod(bod) {
   return pos;
 }
 
+export const defaultEndName = '中断';
 export const endInfos = [
-  { name: '投了', usi: 'resign' },
-  { name: '入玉勝ち', usi: 'win' },
-  { name: '千日手', usi: 'rep_draw' },
-  { name: '反則勝ち', usi: 'rep_win' },
-  { name: '反則負け', usi: 'rep_lose' },
-  { name: '優等局面', usi: 'rep_sup' },
-  { name: '劣等局面', usi: 'rep_inf' },
+  { name: defaultEndName, kif: true, csa: 'CHUDAN' },
+  { name: '投了', kif: true, csa: 'TORYO', usi: 'resign' },
+  { name: '持将棋', kif: true, csa: 'JISHOGI' },
+  { name: '千日手', kif: true, csa: 'SENNICHITE', usi: 'rep_draw' },
+  { name: '切れ負け', kif: true, csa: 'TIME_UP' },
+  { name: '反則勝ち', kif: true, csa: 'ILLEGAL_MOVE', usi: 'rep_win' },
+  { name: '反則負け', kif: true, csa: 'ILLEGAL_ACTION', usi: 'rep_lose' },
+  { name: '入玉勝ち', kif: true, csa: 'KACHI', usi: 'win' },
+  { name: '不戦勝', kif: true, csa: '' },
+  { name: '不戦敗', kif: true, csa: '' },
+  { name: '詰み', kif: true, csa: 'TSUMI' },
+  { name: '不詰', kif: true, csa: 'FUZUMI' },
+  { name: '引き分け', kif: false, csa: 'HIKIWAKE' },
+  { name: '待った', kif: false, csa: 'MATTA' },
+  { name: 'エラー', kif: false, csa: 'ERROR' },
+  { name: '優等局面', kif: false, csa: '', usi: 'rep_sup' },
+  { name: '劣等局面', kif: false, csa: '', usi: 'rep_inf' },
 ];
 export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set(info.usi, info.name), map), new Map());
+export const endKifSet = endInfos.reduce((set, info) => (info.kif && set.add(info.name), set), new Set());
 
 export class Step {
   constructor({ parent, children, move, position, capturedPiece, endName } = {}) {
@@ -843,6 +849,9 @@ export class Step {
   }
 
   appendMove(move) {
+    if (this.endName) {
+      return null;
+    }
     const position = new Position(this.position);
     const capturedPiece = position.doMove(move);
     const step = new Step({ parent: this, move, position, capturedPiece });
@@ -851,6 +860,9 @@ export class Step {
   }
 
   appendEnd(endName) {
+    if (this.endName) {
+      return null;
+    }
     const step = new Step({ parent: this, position: this.position, endName });
     this.children.push(step);
     return step;
@@ -866,18 +878,23 @@ export class Step {
 }
 
 export function formatStep(step) {
-  const text = step.endName
-    ? sideInfos[step.position.sideToMove].char + step.endName
-    : !step.parent
-    ? '開始局面'
-    : sideInfos[step.position.sideToMove ^ 1].char + formatMoveText(step.parent.position, step.move, step.parent.move);
-  return text.length === 3 ? text.slice(0, 2) + '　' + text.slice(2) : text;
+  if (step.endName) {
+    return sideInfos[step.position.sideToMove].char + step.endName;
+  }
+  if (!step.parent) {
+    return '開始局面';
+  }
+  return (
+    sideInfos[step.position.sideToMove ^ 1].char +
+    formatMoveText(step.parent.position, step.move, step.parent.move, true)
+  );
 }
 
+export const defaultStartName = '平手';
 export const defaultSfen = 'lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1';
 
 export const startInfos = [
-  { name: '平手', sfen: defaultSfen },
+  { name: defaultStartName, sfen: defaultSfen },
   { name: '香落ち', sfen: 'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
   { name: '右香落ち', sfen: '1nsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
   { name: '左銀落ち', sfen: 'lnsgkg1nl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
@@ -899,10 +916,12 @@ export const startInfos = [
 export const startNameSfenMap = startInfos.reduce((map, info) => (map.set(info.name, info.sfen), map), new Map());
 
 export class Game {
-  constructor({ startStep, flipped, sideNames } = {}) {
+  constructor({ startStep, flipped, startName, sideNames, playerNames } = {}) {
     this.startStep = startStep;
     this.flipped = flipped || 0;
+    this.startName = startName || '';
     this.sideNames = sideNames?.slice() || ['', ''];
+    this.playerNames = playerNames?.slice() || ['', ''];
   }
 }
 
@@ -954,9 +973,81 @@ export function parseGameUsi(gameUsi) {
         break;
       }
       step = step.appendMove(move);
+      if (!step) {
+        break;
+      }
     }
   }
   return new Game({ startStep });
+}
+
+function formatHeadKif(game) {
+  let headKif = '';
+  if (game.startName) {
+    headKif += '手合割：' + game.startName + '\n';
+  }
+  const sideNames = sides.map((side) => game.sideNames[side] || sideInfos[side].name);
+  if (formatSfen(game.startStep.position) !== startNameSfenMap.get(game.startName || defaultStartName)) {
+    headKif += formatBod(game.startStep.position, sideNames);
+  }
+  for (const side of sides) {
+    if (game.playerNames[side]) {
+      headKif += sideNames[side] + '：' + game.playerNames[side] + '\n';
+    }
+  }
+  return headKif;
+}
+
+export function formatGameKif(game) {
+  let gameKif = formatHeadKif(game) + '手数----指手---------消費時間--\n';
+  const stack = [[game.startStep, 0]];
+  while (stack.length) {
+    const [step, siblingOrder] = stack.pop();
+    if (step.parent) {
+      if (siblingOrder) {
+        gameKif += '\n変化：' + step.position.number + '手\n';
+      }
+      if (step.endName) {
+        gameKif += step.position.number + 1 + ' ';
+        if (endKifSet.has(step.endName)) {
+          gameKif += step.endName + '\n';
+        } else {
+          gameKif += defaultEndName + '\n*#' + step.endName + '\n';
+        }
+      } else {
+        gameKif += step.position.number + ' ' + formatMoveKif(step.parent.position, step.move, step.parent.move) + '\n';
+      }
+    }
+    for (let i = step.children.length; i--; ) {
+      stack.push([step.children[i], i]);
+    }
+  }
+  return gameKif;
+}
+
+export function formatGameKi2(game) {
+  let gameKi2 = formatHeadKif(game);
+  const stack = [[game.startStep, 0]];
+  while (stack.length) {
+    const [step, siblingOrder] = stack.pop();
+    if (step.parent) {
+      if (siblingOrder) {
+        gameKi2 += '\n\n変化：' + step.position.number + '手\n';
+      }
+      if (!step.endName) {
+        if (gameKi2 && !gameKi2.endsWith('\n')) {
+          gameKi2 += ' ';
+        }
+        gameKi2 +=
+          sideInfos[step.position.sideToMove ^ 1].kif +
+          formatMoveText(step.parent.position, step.move, step.parent.move, true);
+      }
+    }
+    for (let i = step.children.length; i--; ) {
+      stack.push([step.children[i], i]);
+    }
+  }
+  return gameKi2 && !gameKi2.endsWith('\n') ? gameKi2 + '\n' : gameKi2;
 }
 
 const pvInfoKeySet = new Set([
@@ -1017,9 +1108,12 @@ export function formatPvScoreValue(pvScoreValue) {
 
 export function formatPvMoveUsis(step, pvMoveUsis) {
   const names = [];
-  let st = new Step(step);
+  let st = new Step({ position: step.position });
   for (const moveUsi of pvMoveUsis) {
     st = st.appendMoveUsi(moveUsi);
+    if (!st) {
+      break;
+    }
     names.push(formatStep(st));
   }
   return names;
