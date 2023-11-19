@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import { on, parseHtml, setTextareaValue } from './browser.mjs';
+import { downloadFile, on, parseHtml, setTextareaValue } from './browser.mjs';
 
 export default class CollectionExportView {
   constructor(app) {
@@ -12,7 +12,7 @@ export default class CollectionExportView {
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>
           <button class="CopyButton">コピー</button>
-          <button class="SubmitButton">ダウンロード</button>
+          <button class="DownloadButton">ダウンロード</button>
         </div>
       </div>
     `);
@@ -26,11 +26,8 @@ export default class CollectionExportView {
       this.app.writeToClipboard(this.textOutput.value);
     });
 
-    on(this.el.querySelector('.SubmitButton'), 'click', () => {
-      const anchor = document.createElement('a');
-      anchor.href = 'data:application/octet-stream,' + encodeURIComponent(this.textOutput.value);
-      anchor.download = 'collection.txt';
-      anchor.click();
+    on(this.el.querySelector('.DownloadButton'), 'click', () => {
+      downloadFile('collection.txt', this.textOutput.value);
     });
   }
 

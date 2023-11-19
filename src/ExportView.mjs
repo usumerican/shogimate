@@ -1,6 +1,6 @@
 /* eslint-env browser */
 
-import { on, parseHtml, setTextareaValue } from './browser.mjs';
+import { downloadFile, on, parseHtml, setTextareaValue } from './browser.mjs';
 import { formatBod, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';
 
 export default class ExportView {
@@ -14,7 +14,7 @@ export default class ExportView {
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>
           <button class="CopyButton">コピー</button>
-          <button class="SubmitButton">ダウンロード</button>
+          <button class="DownloadButton">ダウンロード</button>
         </div>
       </div>
     `);
@@ -45,6 +45,11 @@ export default class ExportView {
 
     on(this.el.querySelector('.CopyButton'), 'click', () => {
       this.app.writeToClipboard(this.textOutput.value);
+    });
+
+    on(this.el.querySelector('.DownloadButton'), 'click', () => {
+      const info = this.formatInfos[+this.formatSelect.value];
+      downloadFile(info.name + info.suffix, this.textOutput.value);
     });
   }
 
