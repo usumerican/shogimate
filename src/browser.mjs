@@ -84,6 +84,13 @@ export function openUrl(url) {
   a.click();
 }
 
+export function downloadFile(name, content) {
+  const anchor = document.createElement('a');
+  anchor.href = 'data:application/octet-stream,' + encodeURIComponent(content);
+  anchor.download = name;
+  anchor.click();
+}
+
 export function shuffle(arr, start, end) {
   if (start < 0) {
     start += arr.length;

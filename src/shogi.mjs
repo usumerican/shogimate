@@ -1000,26 +1000,26 @@ function formatHeadKif(game) {
 
 export function formatGameKif(game) {
   let gameKif = formatHeadKif(game) + '手数----指手---------消費時間--\n';
-  const stack = [[game.startStep, 0]];
+  const stack = [[game.startStep, 0, 0]];
   while (stack.length) {
-    const [step, siblingOrder] = stack.pop();
+    const [step, siblingOrder, depth] = stack.pop();
     if (step.parent) {
       if (siblingOrder) {
-        gameKif += '\n変化：' + step.position.number + '手\n';
+        gameKif += '\n変化：' + depth + '手\n';
       }
+      gameKif += depth + ' ';
       if (step.endName) {
-        gameKif += step.position.number + 1 + ' ';
         if (endKifSet.has(step.endName)) {
           gameKif += step.endName + '\n';
         } else {
           gameKif += defaultEndName + '\n*#' + step.endName + '\n';
         }
       } else {
-        gameKif += step.position.number + ' ' + formatMoveKif(step.parent.position, step.move, step.parent.move) + '\n';
+        gameKif += formatMoveKif(step.parent.position, step.move, step.parent.move) + '\n';
       }
     }
     for (let i = step.children.length; i--; ) {
-      stack.push([step.children[i], i]);
+      stack.push([step.children[i], i, depth + 1]);
     }
   }
   return gameKif;
