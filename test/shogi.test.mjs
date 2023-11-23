@@ -10,10 +10,8 @@ import {
   parseMoveUsi,
   parsePvScore,
   formatPvScoreValue,
-  formatBod,
   defaultSfen,
   parseSfen,
-  parseBod,
   formatMoveKif,
   parseMoveKif,
   formatSfen,
@@ -27,82 +25,26 @@ import {
   getMovePhonemes,
   formatGameKif,
   formatGameKi2,
+  formatGameCsa,
+  parseGameKif,
+  parseGameCsa,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
-  const mateSfen = 'ln1gkg1nl/6+P2/2sppps1p/2p3p2/p8/P1P1P3P/2NP1PP2/3s1KSR1/L1+b2G1NL w R2Pbgp 42';
-
-  test('position format', () => {
-    const data = [
-      {
-        sfen: defaultSfen,
-        bod: `後手の持駒：なし
-  ９ ８ ７ ６ ５ ４ ３ ２ １
-+---------------------------+
-|v香v桂v銀v金v玉v金v銀v桂v香|一
-| ・v飛 ・ ・ ・ ・ ・v角 ・|二
-|v歩v歩v歩v歩v歩v歩v歩v歩v歩|三
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|四
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|五
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|六
-| 歩 歩 歩 歩 歩 歩 歩 歩 歩|七
-| ・ 角 ・ ・ ・ ・ ・ 飛 ・|八
-| 香 桂 銀 金 玉 金 銀 桂 香|九
-+---------------------------+
-先手の持駒：なし
-先手番
-`,
-      },
-      {
-        sfen: 'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
-        bod: `上手の持駒：なし
-  ９ ８ ７ ６ ５ ４ ３ ２ １
-+---------------------------+
-|v香v桂v銀v金v玉v金v銀v桂 ・|一
-| ・v飛 ・ ・ ・ ・ ・v角 ・|二
-|v歩v歩v歩v歩v歩v歩v歩v歩v歩|三
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|四
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|五
-| ・ ・ ・ ・ ・ ・ ・ ・ ・|六
-| 歩 歩 歩 歩 歩 歩 歩 歩 歩|七
-| ・ 角 ・ ・ ・ ・ ・ 飛 ・|八
-| 香 桂 銀 金 玉 金 銀 桂 香|九
-+---------------------------+
-下手の持駒：なし
-上手番
-`,
-        sideNames: ['下手', '上手'],
-      },
-      {
-        sfen: mateSfen,
-        bod: `後手の持駒：角 金 歩
-  ９ ８ ７ ６ ５ ４ ３ ２ １
-+---------------------------+
-|v香v桂 ・v金v玉v金 ・v桂v香|一
-| ・ ・ ・ ・ ・ ・ と ・ ・|二
-| ・ ・v銀v歩v歩v歩v銀 ・v歩|三
-| ・ ・v歩 ・ ・ ・v歩 ・ ・|四
-|v歩 ・ ・ ・ ・ ・ ・ ・ ・|五
-| 歩 ・ 歩 ・ 歩 ・ ・ ・ 歩|六
-| ・ ・ 桂 歩 ・ 歩 歩 ・ ・|七
-| ・ ・ ・v銀 ・ 玉 銀 飛 ・|八
-| 香 ・v馬 ・ ・ 金 ・ 桂 香|九
-+---------------------------+
-先手の持駒：飛 歩二
-手数＝41
-後手番
-`,
-      },
+  test('sfen', () => {
+    const sfens = [
+      defaultSfen,
+      'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', // handicap
+      'l6nl/5+P1gk/2np1S3/p1p4Pp/3P2Sp1/1PPb2P1P/P5GS1/R8/LN4bKL w RGgsn5p 1', // matsuri
+      'ln5+Pl/3s1kg+R1/p2ppl2p/2ps1Bp2/P8/2P3P1P/N2gP4/5KS2/L+r3G1N+b b GS3Pn3p 57', // pinned mate problem
     ];
-    for (const { sfen, bod, sideNames } of data) {
-      const pos = parseSfen(sfen);
-      expect(formatBod(pos, sideNames, pos.number)).toEqual(bod);
-      expect(formatSfen(parseBod(bod))).toEqual(sfen);
+    for (const sfen of Object.values(sfens)) {
+      expect(formatSfen(parseSfen(sfen))).toEqual(sfen);
     }
   });
 
   test('move format', () => {
-    const pos = parseSfen(mateSfen);
+    const pos = parseSfen('ln1gkg1nl/6+P2/2sppps1p/2p3p2/p8/P1P1P3P/2NP1PP2/3s1KSR1/L1+b2G1NL w R2Pbgp 42');
     const lastMove = parseMoveUsi('8i7g');
     const data = [
       { usi: '6h5g', kif: '５七銀(68)' },
@@ -390,7 +332,7 @@ describe('shogi', () => {
     expect(getMovePhonemes('☖同成銀右寄')).toEqual(['どう', 'なりぎん', 'みぎ', 'よる']);
   });
 
-  describe('format game', () => {
+  describe('formatGame', () => {
     const game = parseGameUsi(
       'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1 moves 3c3d 7g7f 2b8h 4i5h B*7g 8i7g'
     );
@@ -399,7 +341,7 @@ describe('shogi', () => {
       game.startName = '香落ち';
       game.sideNames = ['下手', '上手'];
       game.playerNames = ['Black', 'White'];
-      game.startStep.children[0].children[0].children[0].children[0].children[0].children[0].appendEnd('中断');
+      game.startStep.children[0].children[0].children[0].children[0].children[0].children[0].appendEnd('反則勝ち');
       game.startStep.children[0].children[0]
         .appendMoveUsi('2b8h+')
         .appendMoveUsi('6i5h')
@@ -418,7 +360,7 @@ describe('shogi', () => {
 4 ５八金(49)
 5 ７七角打
 6 同　桂(89)
-7 中断
+7 反則勝ち
 
 変化：3手
 3 ８八角成(22)
@@ -438,5 +380,78 @@ describe('shogi', () => {
 △８八角成 ▲５八金左 △７七角
 `);
     });
+
+    test('csa', () => {
+      expect(formatGameCsa(game)).toEqual(`V2.2
+N+Black
+N-White
+PI11KY
+-
+-3334FU
++7776FU
+-2288KA
++4958KI
+-0077KA
++8977KE
+%+ILLEGAL_ACTION
+`);
+    });
+  });
+
+  test('parseGameKif', () => {
+    expect(formatGameUsi(parseGameKif(''))).toEqual('position startpos');
+    expect(formatGameUsi(parseGameKif('手合割：香落ち'))).toEqual(
+      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1'
+    );
+    expect(formatGameUsi(parseGameKif('1 ３四歩(33)\n2 ７六歩(77)'))).toEqual('position startpos moves 3c3d 7g7f');
+    const kif = `手数----指手---------消費時間--
+1 ７六歩(77)
+2 ３四歩(33)
+
+変化：2手
+2 ８四歩(83)
+
+変化：1手
+1 ２六歩(27)
+2 ３四歩(33)
+
+変化：2手
+2 ８四歩(83)
+`;
+    expect(formatGameKif(parseGameKif(kif))).toEqual(kif);
+  });
+
+  test('parseGameCsa', () => {
+    const gameCsas = [
+      `V2.2
+PI11KY82HI
+-
+-3334FU
++7776FU
+-2288KA
++4958KI
+-0077KA
++6968KI
+-8879UM
+%-ILLEGAL_ACTION
+`,
+      `V2.2
+P1-KY-KE *  *  *  *  * +TO-KY
+P2 *  *  * -GI * -OU-KI+RY *\x20
+P3-FU *  * -FU-FU-KY *  * -FU
+P4 *  * -FU-GI * +KA-FU *  *\x20
+P5+FU *  *  *  *  *  *  *  *\x20
+P6 *  * +FU *  *  * +FU * +FU
+P7+KE *  * -KI+FU *  *  *  *\x20
+P8 *  *  *  *  * +OU+GI *  *\x20
+P9+KY-RY *  *  * +KI * +KE-UM
+P+00KI00GI00FU00FU00FU
+P-00KE00FU00FU00FU
++
+`,
+    ];
+    for (const gameCsa of gameCsas) {
+      expect(formatGameCsa(parseGameCsa(gameCsa))).toEqual(gameCsa);
+    }
   });
 });

@@ -1,6 +1,8 @@
 /* eslint-env browser */
 
+import BrowseView from './BrowseView.mjs';
 import CollectionView from './CollectionView.mjs';
+import ImportView from './ImportView.mjs';
 import MatchSettingsView from './MatchSettingsView.mjs';
 import QuestionView from './QuestionView.mjs';
 import SettingsView from './SettingsView.mjs';
@@ -18,6 +20,7 @@ export default class HomeView {
         <button class="StartButton">始めから</button>
         <button class="ChallengeButton">チャレンジ</button>
         <button class="CollectionButton">コレクション</button>
+        <button class="ImportButton">棋譜の読み込み</button>
         <button class="MatchButton">AI 対局</button>
         <div class="ToolBar">
           <button class="InfoButton">ソース</button>
@@ -65,6 +68,13 @@ export default class HomeView {
 
     on(this.el.querySelector('.CollectionButton'), 'click', () => {
       new CollectionView(this.app).show();
+    });
+
+    on(this.el.querySelector('.ImportButton'), 'click', async () => {
+      const game = await new ImportView(this.app).show(this.app.settings.match);
+      if (game) {
+        new BrowseView(this.app).show('棋譜', game);
+      }
     });
 
     on(this.el.querySelector('.MatchButton'), 'click', () => {

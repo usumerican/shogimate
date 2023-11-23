@@ -147,7 +147,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: 1fr repeat(8, $toolH);
+    grid-template-rows: 1fr repeat(9, $toolH);
 
     .TitleOutput {
       font-size: 1.2rem;
@@ -430,5 +430,20 @@
     display: grid;
     gap: $gap;
     grid-template-rows: $rowH 1fr $toolH $toolH;
+  }
+
+  .ImportView {
+    background: $themeColor;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $rowH 1fr $toolH $toolH;
+
+    .FileInput {
+      display: none;
+    }
   }
 }
