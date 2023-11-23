@@ -1,8 +1,8 @@
 export const sideN = 2;
 export const sides = [0, 1];
 export const sideInfos = [
-  { name: '先手', alias: '下手', char: '☗', kif: '▲', usi: 'b' },
-  { name: '後手', alias: '上手', char: '☖', kif: '△', usi: 'w' },
+  { name: '先手', alias: '下手', char: '☗', kif: '▲', usi: 'b', csa: '+' },
+  { name: '後手', alias: '上手', char: '☖', kif: '△', usi: 'w', csa: '-' },
 ];
 
 export const colN = 9;
@@ -60,6 +60,10 @@ export function parseSquareUsi(squareUsi) {
   return makeSquare(charColMap.get(squareUsi[0]), usiRowMap.get(squareUsi[1]));
 }
 
+export function formatSquareCsa(sq) {
+  return colInfos[getCol(sq)].char + rowInfos[getRow(sq)].char;
+}
+
 export const PAWN = 1;
 export const LANCE = 2;
 export const KNIGHT = 3;
@@ -113,14 +117,16 @@ export function isPiecePromotable(piece, fromRow, toRow) {
   return getPieceKind(piece) < GOLD && (getPieceSide(piece) ? toRow > 5 || fromRow > 5 : toRow < 3 || fromRow < 3);
 }
 
+export const baseCounts = [2, 18, 4, 4, 4, 2, 2, 4];
 export const kindInfos = [
-  { name: '', phoneme: '', usi: '', neighbors: [], directions: [] },
-  { name: '歩', phoneme: 'ふぅ', usi: 'P', neighbors: [[0, -1]], directions: [] },
-  { name: '香', phoneme: 'きょう', usi: 'L', neighbors: [], directions: [[0, -1]] },
+  { name: '', phoneme: '', usi: '', csa: '', neighbors: [], directions: [] },
+  { name: '歩', phoneme: 'ふぅ', usi: 'P', csa: 'FU', neighbors: [[0, -1]], directions: [] },
+  { name: '香', phoneme: 'きょう', usi: 'L', csa: 'KY', neighbors: [], directions: [[0, -1]] },
   {
     name: '桂',
     phoneme: 'けい',
     usi: 'N',
+    csa: 'KE',
     neighbors: [
       [-1, -2],
       [1, -2],
@@ -131,6 +137,7 @@ export const kindInfos = [
     name: '銀',
     phoneme: 'ぎん',
     usi: 'S',
+    csa: 'GI',
     neighbors: [
       [-1, -1],
       [-1, 1],
@@ -144,6 +151,7 @@ export const kindInfos = [
     name: '角',
     phoneme: 'かく',
     usi: 'B',
+    csa: 'KA',
     neighbors: [],
     directions: [
       [-1, -1],
@@ -156,6 +164,7 @@ export const kindInfos = [
     name: '飛',
     phoneme: 'ひぃ',
     usi: 'R',
+    csa: 'HI',
     neighbors: [],
     directions: [
       [-1, 0],
@@ -168,6 +177,7 @@ export const kindInfos = [
     name: '金',
     phoneme: 'きん',
     usi: 'G',
+    csa: 'KI',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -182,6 +192,7 @@ export const kindInfos = [
     name: '玉',
     phoneme: 'ぎょく',
     usi: 'K',
+    csa: 'OU',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -197,6 +208,7 @@ export const kindInfos = [
   {
     name: 'と',
     phoneme: 'とぉ',
+    csa: 'TO',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -211,6 +223,7 @@ export const kindInfos = [
     name: '成香',
     char: '杏',
     phoneme: 'なりきょう',
+    csa: 'NY',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -225,6 +238,7 @@ export const kindInfos = [
     name: '成桂',
     char: '圭',
     phoneme: 'なりけい',
+    csa: 'NK',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -239,6 +253,7 @@ export const kindInfos = [
     name: '成銀',
     char: '全',
     phoneme: 'なりぎん',
+    csa: 'NG',
     neighbors: [
       [-1, -1],
       [-1, 0],
@@ -252,6 +267,7 @@ export const kindInfos = [
   {
     name: '馬',
     phoneme: 'うま',
+    csa: 'UM',
     neighbors: [
       [-1, 0],
       [0, -1],
@@ -268,6 +284,7 @@ export const kindInfos = [
   {
     name: '龍',
     phoneme: 'りゅう',
+    csa: 'RY',
     neighbors: [
       [-1, -1],
       [-1, 1],
@@ -308,6 +325,7 @@ export const textKindMap = kindInfos.reduce(
     ['竜', 14],
   ])
 );
+export const csaKindMap = kindInfos.reduce((map, info, kind) => (info.csa && map.set(info.csa, kind), map), new Map());
 
 export const pieceInfos = kindInfos.reduce((arr, info, kind) => {
   if (kind) {
@@ -634,26 +652,6 @@ export function formatMoveKif(pos, move, lastMove) {
   );
 }
 
-const addrPattern = '[1-9１２３４５６７８９一二三四五六七八九]';
-const moveKifRegExp = new RegExp(
-  String.raw`(?:(同\s*)|(${addrPattern})(${addrPattern}))(${[...textKindMap.keys()].join(
-    '|'
-  )})(?:(打)|(成)?\((${addrPattern})(${addrPattern})\))`
-);
-
-export function parseMoveKif(moveKif, lastMove) {
-  const found = moveKif.match(moveKifRegExp);
-  if (!found) {
-    return 0;
-  }
-  const [, sameKif, toColKif, toRowKif, kindKif, droppedKif, promotedKif, fromColKif, fromRowKif] = found;
-  const to = sameKif ? getMoveTo(lastMove) : makeSquare(textColMap.get(toColKif), textRowMap.get(toRowKif));
-  if (droppedKif) {
-    return makeDrop(textKindMap.get(kindKif), to);
-  }
-  return makeMove(makeSquare(textColMap.get(fromColKif), textRowMap.get(fromRowKif)), to, promotedKif);
-}
-
 export function formatSfen(pos) {
   let sfen = '';
   for (let row = 0; row < rowN; row++) {
@@ -770,47 +768,6 @@ export function formatBod(pos, sideNames, number) {
   return bod + (pos.sideToMove ? sideName1 : sideName0) + '番\n';
 }
 
-export function parseBod(bod) {
-  const pos = new Position();
-  for (const line of bod.split('\n').map((line) => line.trim())) {
-    const ch = line[0];
-    if (!ch || ch === '#') {
-      continue;
-    }
-    if (ch === '|') {
-      const row = textRowMap.get(line.slice(-1));
-      for (let col = 0, p = 1; col < colN; col++, p += 2) {
-        const kind = textKindMap.get(line[p + 1]);
-        if (kind) {
-          pos.setPiece(makeSquare(col, row), makePiece(kind, line[p] === 'v'));
-        }
-      }
-      continue;
-    }
-    const p = line.indexOf('：');
-    if (~p) {
-      const name = line.slice(0, p).trim();
-      const value = line.slice(p + 1).trim();
-      if (name.startsWith('手の持駒', 1)) {
-        const side = ch === '後' || ch === '上' ? 1 : 0;
-        for (const s of value.split(/\s+/).map((s) => s.trim())) {
-          pos.addHandCount(side, textKindMap.get(s[0]), textCountMap.get(s.slice(1)) || 1);
-        }
-      }
-      continue;
-    }
-    if (line.startsWith('手数＝')) {
-      pos.number = parseInt(line.slice(3)) || 0;
-      continue;
-    }
-    if (line.startsWith('手番', 1)) {
-      pos.sideToMove = ch === '後' || ch === '上' ? 1 : 0;
-      continue;
-    }
-  }
-  return pos;
-}
-
 export const defaultEndName = '中断';
 export const endInfos = [
   { name: defaultEndName, kif: true, csa: 'CHUDAN' },
@@ -818,8 +775,8 @@ export const endInfos = [
   { name: '持将棋', kif: true, csa: 'JISHOGI' },
   { name: '千日手', kif: true, csa: 'SENNICHITE', usi: 'rep_draw' },
   { name: '切れ負け', kif: true, csa: 'TIME_UP' },
-  { name: '反則勝ち', kif: true, csa: 'ILLEGAL_MOVE', usi: 'rep_win' },
-  { name: '反則負け', kif: true, csa: 'ILLEGAL_ACTION', usi: 'rep_lose' },
+  { name: '反則勝ち', kif: true, csa: 'ILLEGAL_ACTION', usi: 'rep_win' },
+  { name: '反則負け', kif: true, csa: 'ILLEGAL_MOVE', usi: 'rep_lose' },
   { name: '入玉勝ち', kif: true, csa: 'KACHI', usi: 'win' },
   { name: '不戦勝', kif: true, csa: '' },
   { name: '不戦敗', kif: true, csa: '' },
@@ -831,8 +788,9 @@ export const endInfos = [
   { name: '優等局面', kif: false, csa: '', usi: 'rep_sup' },
   { name: '劣等局面', kif: false, csa: '', usi: 'rep_inf' },
 ];
+export const nameEndInfoMap = endInfos.reduce((map, info) => map.set(info.name, info), new Map());
 export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set(info.usi, info.name), map), new Map());
-export const endKifSet = endInfos.reduce((set, info) => (info.kif && set.add(info.name), set), new Set());
+export const csaEndNameMap = endInfos.reduce((map, info) => (info.csa && map.set(info.csa, info.name), map), new Map());
 
 export class Step {
   constructor({ parent, children, move, position, capturedPiece, endName } = {}) {
@@ -894,26 +852,55 @@ export const defaultStartName = '平手';
 export const defaultSfen = 'lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1';
 
 export const startInfos = [
-  { name: defaultStartName, sfen: defaultSfen },
-  { name: '香落ち', sfen: 'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '右香落ち', sfen: '1nsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '左銀落ち', sfen: 'lnsgkg1nl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '右銀落ち', sfen: 'ln1gkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '角落ち', sfen: 'lnsgkgsnl/1r7/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '飛車落ち', sfen: 'lnsgkgsnl/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '飛香落ち', sfen: 'lnsgkgsn1/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '二枚落ち', sfen: 'lnsgkgsnl/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '三枚落ち', sfen: 'lnsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '四枚落ち', sfen: '1nsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '五枚落ち', sfen: '2sgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '左五枚落ち', sfen: '1nsgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '六枚落ち', sfen: '2sgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '左七枚落ち', sfen: '2sgkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '右七枚落ち', sfen: '3gkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '八枚落ち', sfen: '3gkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
-  { name: '十枚落ち', sfen: '4k4/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1' },
+  { name: defaultStartName, sfen: defaultSfen, csa: 'PI' },
+  { name: '香落ち', sfen: 'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI11KY' },
+  { name: '右香落ち', sfen: '1nsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI91KY' },
+  { name: '左銀落ち', sfen: 'lnsgkg1nl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI31GI' },
+  { name: '右銀落ち', sfen: 'ln1gkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI61KY' },
+  { name: '角落ち', sfen: 'lnsgkgsnl/1r7/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI22KA' },
+  { name: '飛車落ち', sfen: 'lnsgkgsnl/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI82HI' },
+  { name: '飛香落ち', sfen: 'lnsgkgsn1/7b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI11KY82HI' },
+  { name: '二枚落ち', sfen: 'lnsgkgsnl/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI22KA82HI' },
+  { name: '三枚落ち', sfen: 'lnsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI11KY22KA82HI' },
+  { name: '四枚落ち', sfen: '1nsgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', csa: 'PI11KY22KA82HI91KY' },
+  {
+    name: '五枚落ち',
+    sfen: '2sgkgsn1/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY22KA81KE82HI91KY',
+  },
+  {
+    name: '左五枚落ち',
+    sfen: '1nsgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA82HI91KY',
+  },
+  {
+    name: '六枚落ち',
+    sfen: '2sgkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA81KE82HI91KY',
+  },
+  {
+    name: '左七枚落ち',
+    sfen: '2sgkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA31GI81KE82HI91KY',
+  },
+  {
+    name: '右七枚落ち',
+    sfen: '3gkgs2/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA71GI81KE82HI91KY',
+  },
+  {
+    name: '八枚落ち',
+    sfen: '3gkg3/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA31GI71GI81KE82HI91KY',
+  },
+  {
+    name: '十枚落ち',
+    sfen: '4k4/9/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
+    csa: 'PI11KY21KE22KA31GI41KI61KI71GI81KE82HI91KY',
+  },
 ];
-export const startNameSfenMap = startInfos.reduce((map, info) => (map.set(info.name, info.sfen), map), new Map());
+export const startNameSfenMap = startInfos.reduce((map, info) => map.set(info.name, info.sfen), new Map());
+export const sfenStartInfoMap = startInfos.reduce((map, info) => map.set(info.sfen, info), new Map());
 
 export class Game {
   constructor({ startStep, flipped, startName, sideNames, playerNames } = {}) {
@@ -1009,7 +996,7 @@ export function formatGameKif(game) {
       }
       gameKif += depth + ' ';
       if (step.endName) {
-        if (endKifSet.has(step.endName)) {
+        if (nameEndInfoMap.get(step.endName)?.kif) {
           gameKif += step.endName + '\n';
         } else {
           gameKif += defaultEndName + '\n*#' + step.endName + '\n';
@@ -1048,6 +1035,243 @@ export function formatGameKi2(game) {
     }
   }
   return gameKi2 && !gameKi2.endsWith('\n') ? gameKi2 + '\n' : gameKi2;
+}
+
+const addrKifPattern = '[1-9１２３４５６７８９一二三四五六七八九]';
+const kindKifPattern = [...textKindMap.keys()].join('|');
+const moveKifRegExp = new RegExp(
+  String.raw`(?:(同\s*)|(${addrKifPattern})(${addrKifPattern}))(${kindKifPattern})(?:(打)|(成)?\((${addrKifPattern})(${addrKifPattern})\))`
+);
+
+export function parseMoveKif(moveKif, lastMove) {
+  const found = moveKif.match(moveKifRegExp);
+  if (!found) {
+    return 0;
+  }
+  const [, sameKif, toColKif, toRowKif, kindKif, droppedKif, promotedKif, fromColKif, fromRowKif] = found;
+  const to = sameKif ? getMoveTo(lastMove) : makeSquare(textColMap.get(toColKif), textRowMap.get(toRowKif));
+  if (droppedKif) {
+    return makeDrop(textKindMap.get(kindKif), to);
+  }
+  return makeMove(makeSquare(textColMap.get(fromColKif), textRowMap.get(fromRowKif)), to, promotedKif);
+}
+
+export function parseGameKif(gameKif) {
+  const game = parseGameUsi(defaultSfen);
+  let targetStep = game.startStep;
+  const numberSteps = [targetStep];
+  for (const line of gameKif.split('\n').map((line) => line.trim())) {
+    const ch = line[0];
+    if (!ch || ch === '#') {
+      continue;
+    }
+    if (ch === '|') {
+      const row = textRowMap.get(line.slice(-1));
+      for (let col = 0, p = 1; col < colN; col++, p += 2) {
+        const kind = textKindMap.get(line[p + 1]);
+        game.startStep.position.setPiece(makeSquare(col, row), kind ? makePiece(kind, line[p] === 'v') : 0);
+      }
+      continue;
+    }
+    const p = line.indexOf('：');
+    if (~p) {
+      const name = line.slice(0, p).trim();
+      const value = line.slice(p + 1).trim();
+      if (name === '手合割') {
+        game.startName = value;
+        game.startStep.position = parseSfen(startNameSfenMap.get(game.startName) || defaultSfen);
+      } else if (name.startsWith('手の持駒', 1)) {
+        const side = ch === '後' || ch === '上' ? 1 : 0;
+        for (const s of value.split(/\s+/).map((s) => s.trim())) {
+          game.startStep.position.addHandCount(side, textKindMap.get(s[0]), textCountMap.get(s.slice(1)) || 1);
+        }
+      } else if (name === '変化') {
+        targetStep = numberSteps[parseInt(value) - 1] || targetStep;
+      }
+      continue;
+    }
+    if (line.startsWith('手数＝')) {
+      game.startStep.position.number = parseInt(line.slice(3)) || 0;
+      continue;
+    }
+    if (line.startsWith('手番', 1)) {
+      game.startStep.position.sideToMove = ch === '後' || ch === '上' ? 1 : 0;
+      continue;
+    }
+    const move = parseMoveKif(line);
+    if (move) {
+      targetStep = targetStep.appendMove(move);
+      numberSteps[targetStep.position.number] = targetStep;
+    }
+  }
+  return game;
+}
+
+export function formatGameCsa(game) {
+  let gameCsa = 'V2.2\n';
+  for (const side of sides) {
+    const playerName = game.playerNames[side];
+    if (playerName) {
+      gameCsa += 'N' + sideInfos[side].csa + playerName + '\n';
+    }
+  }
+  const pos = game.startStep.position;
+  const startInfo = sfenStartInfoMap.get(formatSfen(pos));
+  if (startInfo?.csa) {
+    gameCsa += startInfo.csa + '\n';
+  } else {
+    for (let row = 0; row < rowN; row++) {
+      gameCsa += 'P' + (row + 1);
+      for (let col = 0; col < colN; col++) {
+        const piece = pos.getPiece(makeSquare(col, row));
+        gameCsa += piece ? sideInfos[getPieceSide(piece)].csa + kindInfos[getPieceKind(piece)].csa : ' * ';
+      }
+      gameCsa += '\n';
+    }
+  }
+  for (const side of sides) {
+    let handCsa = '';
+    for (const base of handBases) {
+      const count = pos.getHandCount(side, base);
+      if (count) {
+        handCsa += ('00' + kindInfos[base].csa).repeat(count);
+      }
+    }
+    if (handCsa) {
+      gameCsa += 'P' + sideInfos[side].csa + handCsa + '\n';
+    }
+  }
+  gameCsa += sideInfos[pos.sideToMove].csa + '\n';
+  for (let st = game.startStep.children[0]; st; st = st.children[0]) {
+    if (st.endName) {
+      const endCsa = nameEndInfoMap.get(st.endName).csa || 'CHUDAN';
+      gameCsa += '%' + (endCsa === 'ILLEGAL_ACTION' ? sideInfos[st.position.sideToMove ^ 1].csa : '') + endCsa;
+    } else {
+      const to = getMoveTo(st.move);
+      gameCsa +=
+        sideInfos[st.position.sideToMove ^ 1].csa +
+        (isMoveDropped(st.move) ? '00' : formatSquareCsa(getMoveFrom(st.move))) +
+        formatSquareCsa(to) +
+        kindInfos[getPieceKind(st.position.getPiece(to))].csa;
+    }
+    gameCsa += '\n';
+  }
+  return gameCsa;
+}
+
+const kindCsaPattern = kindInfos
+  .map((info) => info.csa)
+  .filter((csa) => csa)
+  .join('|');
+const startCsaRegExp = new RegExp(String.raw`([1-9])([1-9])(${kindCsaPattern})`);
+const handCsaRegExp = new RegExp(String.raw`(00AL)|(?:(00)|([1-9])([1-9]))(${kindCsaPattern})`);
+const boardCsaRegExp = new RegExp(String.raw`([+-])(${kindCsaPattern})`);
+const moveCsaRegExp = new RegExp(String.raw`(?:(00)|([1-9])([1-9]))([1-9])([1-9])(${kindCsaPattern})`);
+
+export function parseGameCsa(gameCsa) {
+  if (!gameCsa.match(/^\s*[+-]\s*$/m)) {
+    return null;
+  }
+  const game = new Game({ startStep: new Step({ position: new Position() }) });
+  const stockCounts = baseCounts.slice();
+  let targetStep = game.startStep;
+  for (const line of gameCsa.split(/[\n,]/).map((line) => line.trim())) {
+    const ch = line[0];
+    if (!ch || ch === "'") {
+      continue;
+    }
+    if (ch === '/') {
+      break;
+    }
+    const ch2 = line[1];
+    if (ch === 'N') {
+      game.playerNames[ch2 === '-' ? 1 : 0] = line.slice(2).trim();
+      continue;
+    }
+    if (ch === 'P') {
+      if (ch2 === 'I') {
+        game.startStep.position = parseSfen(defaultSfen);
+        stockCounts.fill(0);
+        for (let i = 2; i < line.length; i += 4) {
+          const found = line.slice(i, i + 4).match(startCsaRegExp);
+          if (!found) {
+            break;
+          }
+          game.startStep.position.setPiece(makeSquare(textColMap.get(found[1]), textRowMap.get(found[2])), 0);
+        }
+      } else if (ch2 === '+' || ch2 === '-') {
+        const side = ch2 === '-' ? 1 : 0;
+        for (let i = 2; i < line.length; i += 4) {
+          const found = line.slice(i, i + 4).match(handCsaRegExp);
+          if (!found) {
+            break;
+          }
+          const [, all, hand, colS, rowS, kindCsa] = found;
+          if (all) {
+            for (let base = 1; base < stockCounts.length; base++) {
+              game.startStep.position.addHandCount(side, base, stockCounts[base]);
+              stockCounts[base] = 0;
+            }
+          } else {
+            const kind = csaKindMap.get(kindCsa);
+            const base = getPieceBase(kind);
+            stockCounts[base]--;
+            if (hand) {
+              game.startStep.position.addHandCount(side, base, 1);
+            } else {
+              game.startStep.position.setPiece(
+                makeSquare(textColMap.get(colS), textRowMap.get(rowS)),
+                makePiece(kind, side)
+              );
+            }
+          }
+        }
+      } else {
+        const row = +ch2 - 1;
+        if (row >= 0) {
+          for (let i = 2, col = 0; i < line.length; i += 3, col++) {
+            const sq = makeSquare(col, row);
+            const found = line.slice(i, i + 3).match(boardCsaRegExp);
+            if (found) {
+              const piece = makePiece(csaKindMap.get(found[2]), found[1] === '-' ? 1 : 0);
+              game.startStep.position.setPiece(sq, piece);
+              stockCounts[getPieceBase(piece)]--;
+            } else {
+              game.startStep.position.setPiece(sq, 0);
+            }
+          }
+        }
+      }
+      continue;
+    }
+    if (ch === '+' || ch === '-') {
+      if (ch2) {
+        const found = line.slice(1).match(moveCsaRegExp);
+        if (found) {
+          const [, dropped, fromColS, fromRowS, toColS, toRowS, kindCsa] = found;
+          const to = makeSquare(textColMap.get(toColS), textRowMap.get(toRowS));
+          const kind = csaKindMap.get(kindCsa);
+          let move;
+          if (dropped) {
+            move = makeDrop(getPieceBase(kind), to);
+          } else {
+            const from = makeSquare(textColMap.get(fromColS), textRowMap.get(fromRowS));
+            move = makeMove(from, to, getPieceKind(targetStep.position.getPiece(from)) !== kind);
+          }
+          targetStep = targetStep.appendMove(move);
+        }
+      } else {
+        game.startStep.position.sideToMove = ch === '-' ? 1 : 0;
+      }
+      continue;
+    }
+    if (ch === '%') {
+      const endCsa = line.slice(ch2 === '+' || ch2 === '-' ? 2 : 1);
+      targetStep = targetStep.appendEnd(csaEndNameMap.get(endCsa) || defaultEndName);
+      continue;
+    }
+  }
+  return game;
 }
 
 const pvInfoKeySet = new Set([

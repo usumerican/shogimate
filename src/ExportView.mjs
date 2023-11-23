@@ -1,7 +1,7 @@
 /* eslint-env browser */
 
-import { downloadFile, on, parseHtml, setTextareaValue } from './browser.mjs';
-import { formatBod, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';
+import { downloadFile, on, parseHtml, setSelectValue, setTextareaValue } from './browser.mjs';
+import { formatBod, formatGameCsa, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';
 
 export default class ExportView {
   constructor(app) {
@@ -20,26 +20,27 @@ export default class ExportView {
     `);
     this.textOutput = this.el.querySelector('.TextOutput');
     this.formatInfos = [
-      { name: '棋譜', suffix: '.kifu', handler: () => formatGameKif(this.game) },
-      { name: '棋譜', suffix: '.ki2u', handler: () => formatGameKi2(this.game) },
-      { name: '棋譜', suffix: '.usi', handler: () => formatGameUsi(this.game) },
+      { name: 'game.kifu', title: '棋譜 (KIF)', handler: () => formatGameKif(this.game) },
+      { name: 'game.ki2u', title: '棋譜 (KI2)', handler: () => formatGameKi2(this.game) },
+      { name: 'game.csa', title: '棋譜 (CSA)', handler: () => formatGameCsa(this.game) },
+      { name: 'game.usi', title: '棋譜 (USI)', handler: () => formatGameUsi(this.game) },
       {
-        name: '局面',
-        suffix: '.bod',
+        name: 'position.bod',
+        title: '局面 (BOD)',
         handler: () => formatBod(this.step.position, this.game.sideNames, this.step.position.number),
       },
-      { name: '局面', suffix: '.sfen', handler: () => formatSfen(this.step.position) },
+      { name: 'position.sfen', title: '局面 (SFEN)', handler: () => formatSfen(this.step.position) },
     ];
     this.formatSelect = this.el.querySelector('.FormatSelect');
-    this.formatSelect.replaceChildren(
-      ...this.formatInfos.map((info, i) => new Option(`${info.name} (${info.suffix})`, i))
-    );
+    this.formatSelect.replaceChildren(...this.formatInfos.map((info) => new Option(info.title, info.name)));
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
     });
 
     on(this.formatSelect, 'change', () => {
+      this.app.settings.export = { formatName: this.formatSelect.value };
+      this.app.saveSettings();
       this.update();
     });
 
@@ -48,14 +49,14 @@ export default class ExportView {
     });
 
     on(this.el.querySelector('.DownloadButton'), 'click', () => {
-      const info = this.formatInfos[+this.formatSelect.value];
-      downloadFile(info.name + info.suffix, this.textOutput.value);
+      downloadFile(this.formatSelect.value, this.textOutput.value);
     });
   }
 
   show(game, step) {
     this.game = game;
     this.step = step;
+    setSelectValue(this.formatSelect, this.app.settings.export?.formatName);
     this.update();
     this.app.pushView(this);
   }
@@ -65,6 +66,6 @@ export default class ExportView {
   }
 
   update() {
-    setTextareaValue(this.textOutput, this.formatInfos[+this.formatSelect.value].handler());
+    setTextareaValue(this.textOutput, this.formatInfos[this.formatSelect.selectedIndex].handler());
   }
 }
