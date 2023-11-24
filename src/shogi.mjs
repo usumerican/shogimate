@@ -568,7 +568,7 @@ export function getMoveModifiers(pos, move) {
       }
     }
   });
-  if (~attacker) {
+  if (attacker >= 0) {
     if (vc) {
       if (hc) {
         if (hm === '直') {
@@ -604,6 +604,46 @@ export function formatMoveText(pos, move, lastMove, padding) {
     getMoveModifiers(pos, move).join('');
 
   return padding && text.length === 2 ? text[0] + '　' + text.slice(1) : text;
+}
+
+export function getModifierFrom(pos, to, kind, hm, vm) {
+  let from = -1;
+  const toCol = getCol(to);
+  const toRow = getRow(to);
+  const side = pos.sideToMove;
+  walkAttackers(pos, toCol, toRow, makePiece(kind, side), (sq) => {
+    if (hm) {
+      if (vm) {
+        if (
+          hm === getHorizontalModifier(toCol - getCol(sq), side) &&
+          vm === getVerticalModifier(toRow - getRow(sq), side)
+        ) {
+          from = sq;
+          return true;
+        }
+      } else {
+        const dc = toCol - getCol(sq);
+        if (hm === getHorizontalModifier(dc, side)) {
+          from = sq;
+          return true;
+        } else if (!dc && kind >= HORSE) {
+          from = sq;
+        }
+      }
+    } else {
+      if (vm) {
+        if (vm === getVerticalModifier(toRow - getRow(sq), side)) {
+          from = sq;
+          return true;
+        }
+      } else {
+        from = sq;
+        return true;
+      }
+    }
+    return false;
+  });
+  return from;
 }
 
 const colPattern = [...textColMap.keys()].join('|');
@@ -1042,6 +1082,10 @@ const kindKifPattern = [...textKindMap.keys()].join('|');
 const moveKifRegExp = new RegExp(
   String.raw`(?:(同\s*)|(${addrKifPattern})(${addrKifPattern}))(${kindKifPattern})(?:(打)|(成)?\((${addrKifPattern})(${addrKifPattern})\))`
 );
+const endKifPattern = endInfos.reduce((arr, info) => (info.kif && arr.push(info.name), arr), []).join('|');
+const moveKi2RegExp = new RegExp(
+  String.raw`^\s*(?:\d+\.?\s+)?(?:[☗☖▲△▽])?(?:(${endKifPattern})|(?:(同\s*)|(${addrKifPattern})(${addrKifPattern})(?:同\s*)?)(${kindKifPattern})(?:(打)|([左右直])?([上下寄])?(不?成)?(?:\((${addrKifPattern})(${addrKifPattern})\))?))(?:\s*\(\s*(\d+):(\d+)(?:\s*/\s*\d+:\d+:\d+)\s*\))?\+?`
+);
 
 export function parseMoveKif(moveKif, lastMove) {
   const found = moveKif.match(moveKifRegExp);
@@ -1053,7 +1097,7 @@ export function parseMoveKif(moveKif, lastMove) {
   if (droppedKif) {
     return makeDrop(textKindMap.get(kindKif), to);
   }
-  return makeMove(makeSquare(textColMap.get(fromColKif), textRowMap.get(fromRowKif)), to, promotedKif);
+  return makeMove(makeSquare(textColMap.get(fromColKif), textRowMap.get(fromRowKif)), to, promotedKif === '成');
 }
 
 export function parseGameKif(gameKif) {
@@ -1074,12 +1118,18 @@ export function parseGameKif(gameKif) {
       continue;
     }
     const p = line.indexOf('：');
-    if (~p) {
+    if (p >= 0) {
       const name = line.slice(0, p).trim();
       const value = line.slice(p + 1).trim();
       if (name === '手合割') {
         game.startName = value;
         game.startStep.position = parseSfen(startNameSfenMap.get(game.startName) || defaultSfen);
+      } else if (name === '先手' || name === '下手') {
+        game.sideNames[0] = name;
+        game.playerNames[0] = value;
+      } else if (name === '後手' || name === '上手') {
+        game.sideNames[1] = name;
+        game.playerNames[1] = value;
       } else if (name.startsWith('手の持駒', 1)) {
         const side = ch === '後' || ch === '上' ? 1 : 0;
         for (const s of value.split(/\s+/).map((s) => s.trim())) {
@@ -1098,10 +1148,32 @@ export function parseGameKif(gameKif) {
       game.startStep.position.sideToMove = ch === '後' || ch === '上' ? 1 : 0;
       continue;
     }
-    const move = parseMoveKif(line);
-    if (move) {
-      targetStep = targetStep.appendMove(move);
-      numberSteps[targetStep.position.number] = targetStep;
+    for (let p = 0, found; (found = line.slice(p).match(moveKi2RegExp)); p += found[0].length) {
+      const [, endName, sm, toColS, toRowS, kindKif, dm, hm, vm, pm, fromColS, fromRowS] = found;
+      if (endName) {
+        targetStep.appendEnd(endName);
+      } else {
+        const to = sm ? getMoveTo(targetStep.move) : makeSquare(textColMap.get(toColS), textRowMap.get(toRowS));
+        const kind = textKindMap.get(kindKif);
+        const promoted = pm === '成';
+        let move;
+        if (dm) {
+          move = makeDrop(kind, to);
+        } else if (fromColS) {
+          move = makeMove(makeSquare(textColMap.get(fromColS), textRowMap.get(fromRowS)), to, promoted);
+        } else {
+          const from = getModifierFrom(targetStep.position, to, kind, hm, vm);
+          if (from >= 0) {
+            move = makeMove(from, to, promoted);
+          } else {
+            move = makeDrop(getPieceBase(kind), to);
+          }
+        }
+        if (move) {
+          targetStep = targetStep.appendMove(move);
+          numberSteps[targetStep.position.number] = targetStep;
+        }
+      }
     }
   }
   return game;
