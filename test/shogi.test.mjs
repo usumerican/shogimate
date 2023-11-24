@@ -28,6 +28,10 @@ import {
   formatGameCsa,
   parseGameKif,
   parseGameCsa,
+  getModifierFrom,
+  PRO_PAWN,
+  HORSE,
+  DRAGON,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -224,6 +228,12 @@ describe('shogi', () => {
       expect(formatMoveText(pos, makeMove(makeSquare(5, 3), makeSquare(4, 4)))).toEqual('５五と左上');
       expect(formatMoveText(pos, makeMove(makeSquare(5, 4), makeSquare(4, 4)))).toEqual('５五と寄');
       expect(formatMoveText(pos, makeMove(makeSquare(4, 5), makeSquare(4, 4)))).toEqual('５五と引');
+
+      expect(getModifierFrom(pos, makeSquare(4, 4), PRO_PAWN, '右', null)).toEqual(makeSquare(3, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 4), PRO_PAWN, '直', null)).toEqual(makeSquare(4, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 4), PRO_PAWN, '左', '上')).toEqual(makeSquare(5, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 4), PRO_PAWN, null, '寄')).toEqual(makeSquare(5, 4));
+      expect(getModifierFrom(pos, makeSquare(4, 4), PRO_PAWN, null, '引')).toEqual(makeSquare(4, 5));
     });
 
     test('ROOK', () => {
@@ -276,6 +286,15 @@ describe('shogi', () => {
       expect(formatMoveText(pos, makeMove(makeSquare(4, 3), makeSquare(3, 3)))).toEqual('６四馬寄');
       expect(formatMoveText(pos, makeMove(makeSquare(2, 2), makeSquare(4, 4)))).toEqual('５五馬右');
       expect(formatMoveText(pos, makeMove(makeSquare(4, 3), makeSquare(4, 4)))).toEqual('５五馬左');
+
+      expect(getModifierFrom(pos, makeSquare(2, 1), HORSE, '右', null)).toEqual(makeSquare(2, 2));
+      expect(getModifierFrom(pos, makeSquare(2, 1), HORSE, '左', null)).toEqual(makeSquare(4, 3));
+      expect(getModifierFrom(pos, makeSquare(3, 2), HORSE, null, '寄')).toEqual(makeSquare(2, 2));
+      expect(getModifierFrom(pos, makeSquare(3, 2), HORSE, null, '引')).toEqual(makeSquare(4, 3));
+      expect(getModifierFrom(pos, makeSquare(3, 3), HORSE, null, '上')).toEqual(makeSquare(2, 2));
+      expect(getModifierFrom(pos, makeSquare(3, 3), HORSE, null, '寄')).toEqual(makeSquare(4, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 4), HORSE, '右', null)).toEqual(makeSquare(2, 2));
+      expect(getModifierFrom(pos, makeSquare(4, 4), HORSE, '左', null)).toEqual(makeSquare(4, 3));
     });
 
     test('DRAGON', () => {
@@ -302,6 +321,15 @@ describe('shogi', () => {
       expect(formatMoveText(pos, makeMove(makeSquare(5, 3), makeSquare(4, 3)))).toEqual('５四龍寄');
       expect(formatMoveText(pos, makeMove(makeSquare(4, 2), makeSquare(4, 4)))).toEqual('５五龍右');
       expect(formatMoveText(pos, makeMove(makeSquare(5, 3), makeSquare(4, 4)))).toEqual('５五龍左');
+
+      expect(getModifierFrom(pos, makeSquare(5, 1), DRAGON, '右', null)).toEqual(makeSquare(4, 2));
+      expect(getModifierFrom(pos, makeSquare(5, 1), DRAGON, '左', null)).toEqual(makeSquare(5, 3));
+      expect(getModifierFrom(pos, makeSquare(5, 2), DRAGON, null, '寄')).toEqual(makeSquare(4, 2));
+      expect(getModifierFrom(pos, makeSquare(5, 2), DRAGON, null, '引')).toEqual(makeSquare(5, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 3), DRAGON, null, '上')).toEqual(makeSquare(4, 2));
+      expect(getModifierFrom(pos, makeSquare(4, 3), DRAGON, null, '寄')).toEqual(makeSquare(5, 3));
+      expect(getModifierFrom(pos, makeSquare(4, 4), DRAGON, '右', null)).toEqual(makeSquare(4, 2));
+      expect(getModifierFrom(pos, makeSquare(4, 4), DRAGON, '左', null)).toEqual(makeSquare(5, 3));
     });
 
     test('same', () => {
@@ -404,26 +432,44 @@ PI11KY
       'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1'
     );
     expect(formatGameUsi(parseGameKif('1 ３四歩(33)\n2 ７六歩(77)'))).toEqual('position startpos moves 3c3d 7g7f');
-    const kif = `手数----指手---------消費時間--
-1 ７六歩(77)
-2 ３四歩(33)
+    const kif = `手合割：香落ち
+下手：Black
+上手：White
+手数----指手---------消費時間--
+1 ３四歩(33)
+2 ７六歩(77)
+3 ８八角(22)
+4 ５八金(49)
+5 ７七角打
+6 同　桂(89)
+7 反則勝ち
 
-変化：2手
-2 ８四歩(83)
-
-変化：1手
-1 ２六歩(27)
-2 ３四歩(33)
-
-変化：2手
-2 ８四歩(83)
+変化：3手
+3 ８八角成(22)
+4 ５八金(69)
+5 ７七角打
+6 投了
 `;
     expect(formatGameKif(parseGameKif(kif))).toEqual(kif);
+  });
+
+  test('parseGameKi2', () => {
+    const ki2 = `手合割：香落ち
+下手：Black
+上手：White
+△３四歩 ▲７六歩 △８八角不成 ▲５八金右 △７七角打 ▲同　桂
+
+変化：3手
+△８八角成 ▲５八金左 △７七角
+`;
+    expect(formatGameKi2(parseGameKif(ki2))).toEqual(ki2);
   });
 
   test('parseGameCsa', () => {
     const gameCsas = [
       `V2.2
+N+Black
+N-White
 PI11KY82HI
 -
 -3334FU
