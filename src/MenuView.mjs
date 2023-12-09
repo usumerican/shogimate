@@ -29,8 +29,8 @@ export default class MenuView {
         button.textContent = item.title;
         button.disabled = item.disabled;
         on(button, 'click', () => {
-          item.callback();
           this.hide();
+          item.callback();
         });
         return button;
       })

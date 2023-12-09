@@ -833,45 +833,59 @@ export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set
 export const csaEndNameMap = endInfos.reduce((map, info) => (info.csa && map.set(info.csa, info.name), map), new Map());
 
 export class Step {
-  constructor({ parent, children, move, position, capturedPiece, endName } = {}) {
+  constructor({ parent, children, move, position, capturedPiece, endName, lapTimes } = {}) {
     this.parent = parent;
     this.children = children?.slice() || [];
     this.move = move || 0;
     this.position = position;
     this.capturedPiece = capturedPiece || 0;
     this.endName = endName || '';
+    this.lapTimes = lapTimes?.slice() || [0, 0];
   }
 
   isMove() {
     return this.parent && !this.endName;
   }
 
-  appendMove(move) {
+  appendMove(move, lapTime = 0) {
     if (this.endName) {
       return null;
     }
     const position = new Position(this.position);
     const capturedPiece = position.doMove(move);
-    const step = new Step({ parent: this, move, position, capturedPiece });
+    const step = new Step({
+      parent: this,
+      move,
+      position,
+      capturedPiece,
+      lapTimes: this.lapTimes,
+    });
+    step.lapTimes[this.position.sideToMove] = lapTime;
     this.children.push(step);
     return step;
   }
 
-  appendEnd(endName) {
+  appendEnd(endName, lapTime = 0) {
     if (this.endName) {
       return null;
     }
-    const step = new Step({ parent: this, position: this.position, endName });
+    const step = new Step({
+      parent: this,
+      position: this.position,
+      endName,
+      lapTimes: this.lapTimes,
+    });
+    step.lapTimes[this.position.sideToMove] = lapTime;
     this.children.push(step);
     return step;
   }
 
-  appendMoveUsi(moveUsi) {
+  appendMoveUsi(moveUsi, lapTime = 0) {
     const move = parseMoveUsi(moveUsi);
     if (move) {
-      return this.appendMove(move);
+      return this.appendMove(move, lapTime);
     }
-    return this.appendEnd(usiEndNameMap.get(moveUsi) || moveUsi);
+    return this.appendEnd(usiEndNameMap.get(moveUsi) || moveUsi, lapTime);
   }
 }
 
@@ -942,13 +956,100 @@ export const startInfos = [
 export const startNameSfenMap = startInfos.reduce((map, info) => map.set(info.name, info.sfen), new Map());
 export const sfenStartInfoMap = startInfos.reduce((map, info) => map.set(info.sfen, info), new Map());
 
+export const BYOYOMI = 'byoyomi';
+export const FISCHER = 'fischer';
+
+export const timingInfos = [
+  { name: BYOYOMI, title: '秒読み' },
+  { name: FISCHER, title: 'フィッシャー' },
+];
+
+export class Clock {
+  constructor(mainTime, extraTime, timingName) {
+    this.mainTime = mainTime || 0;
+    this.extraTime = extraTime || 0;
+    this.timingName = timingName || '';
+    this.startTime = 0;
+    this.restTime = 0;
+  }
+
+  init() {
+    if (this.isLimited()) {
+      this.restTime = this.mainTime;
+      if (this.timingName === BYOYOMI || (this.timingName === FISCHER && !this.mainTime)) {
+        this.restTime += this.extraTime;
+      }
+    } else {
+      this.restTime = 0;
+    }
+  }
+
+  start(now = Date.now()) {
+    this.startTime = now;
+    if (this.timingName === BYOYOMI && this.restTime > 0 && this.restTime < this.extraTime) {
+      this.restTime = this.extraTime;
+    }
+  }
+
+  stop(now = Date.now()) {
+    const lapTime = this.startTime ? Math.floor((now - this.startTime) / 1000) * 1000 : 0;
+    this.startTime = 0;
+    this.restTime -= lapTime;
+    if (this.timingName === FISCHER && this.restTime > 0) {
+      this.restTime += this.extraTime;
+    }
+    return lapTime;
+  }
+
+  getTime(now = Date.now()) {
+    const dt = this.startTime ? now - this.startTime : 0;
+    const time = Math.ceil((this.restTime - dt) / 1000) * 1000;
+    return this.isLimited() ? time : -time;
+  }
+
+  isLimited() {
+    return this.mainTime || this.extraTime;
+  }
+}
+
 export class Game {
-  constructor({ startStep, flipped, startName, sideNames, playerNames } = {}) {
+  constructor({ startStep, flipped, startName, sideNames, playerNames, clocks } = {}) {
     this.startStep = startStep;
     this.flipped = flipped || 0;
     this.startName = startName || '';
     this.sideNames = sideNames?.slice() || ['', ''];
     this.playerNames = playerNames?.slice() || ['', ''];
+    this.clocks = clocks?.slice() || [new Clock(), new Clock()];
+  }
+
+  get mainTime() {
+    return this.clocks[0].mainTime;
+  }
+
+  set mainTime(value) {
+    for (const side of sides) {
+      this.clocks[side].mainTime = value;
+    }
+  }
+
+  get extraTime() {
+    return this.clocks[0].extraTime;
+  }
+
+  set extraTime(value) {
+    for (const side of sides) {
+      this.clocks[side].extraTime = value;
+    }
+  }
+
+  get timingName() {
+    return this.clocks[0].timingName;
+  }
+
+  set timingName(value) {
+    for (const side of sides) {
+      this.clocks[side].timingName = value;
+    }
   }
 }
 
@@ -1025,28 +1126,44 @@ function formatHeadKif(game) {
   return headKif;
 }
 
+export function formatTimeMS(time) {
+  return Math.floor(time / 60_000) + ':' + ('' + (Math.floor(time / 1000) % 60)).padStart(2, '0');
+}
+
+export function formatTimeHMS(time) {
+  return (
+    Math.floor(time / 3_600_000) +
+    ':' +
+    ('' + (Math.floor(time / 60_000) % 60)).padStart(2, '0') +
+    ':' +
+    ('' + (Math.floor(time / 1000) % 60)).padStart(2, '0')
+  );
+}
+
 export function formatGameKif(game) {
   let gameKif = formatHeadKif(game) + '手数----指手---------消費時間--\n';
-  const stack = [[game.startStep, 0, 0]];
+  const stack = [[game.startStep, 0, 0, [0, 0]]];
   while (stack.length) {
-    const [step, siblingOrder, depth] = stack.pop();
+    const [step, depth, siblingOrder, parentTotalTimes] = stack.pop();
+    const totalTimes = parentTotalTimes.slice(0);
     if (step.parent) {
       if (siblingOrder) {
         gameKif += '\n変化：' + depth + '手\n';
       }
       gameKif += depth + ' ';
       if (step.endName) {
-        if (nameEndInfoMap.get(step.endName)?.kif) {
-          gameKif += step.endName + '\n';
-        } else {
-          gameKif += defaultEndName + '\n*#' + step.endName + '\n';
-        }
+        gameKif += nameEndInfoMap.get(step.endName)?.kif ? step.endName : defaultEndName;
       } else {
-        gameKif += formatMoveKif(step.parent.position, step.move, step.parent.move) + '\n';
+        gameKif += formatMoveKif(step.parent.position, step.move, step.parent.move);
       }
+      const side = step.parent.position.sideToMove;
+      const lapTime = step.lapTimes[side];
+      totalTimes[side] += lapTime;
+      gameKif += ' (' + formatTimeMS(lapTime) + '/' + formatTimeHMS(totalTimes[side]) + ')\n';
     }
+    const d = depth + 1;
     for (let i = step.children.length; i--; ) {
-      stack.push([step.children[i], i, depth + 1]);
+      stack.push([step.children[i], d, i, totalTimes]);
     }
   }
   return gameKif;
@@ -1077,28 +1194,12 @@ export function formatGameKi2(game) {
   return gameKi2 && !gameKi2.endsWith('\n') ? gameKi2 + '\n' : gameKi2;
 }
 
+const endKifPattern = endInfos.reduce((arr, info) => (info.kif && arr.push(info.name), arr), []).join('|');
 const addrKifPattern = '[1-9１２３４５６７８９一二三四五六七八九]';
 const kindKifPattern = [...textKindMap.keys()].join('|');
 const moveKifRegExp = new RegExp(
-  String.raw`(?:(同\s*)|(${addrKifPattern})(${addrKifPattern}))(${kindKifPattern})(?:(打)|(成)?\((${addrKifPattern})(${addrKifPattern})\))`
+  String.raw`^\s*(?:\d+\.?\s+)?(?:[☗☖▲△▽])?(?:(${endKifPattern})|(?:(同\s*)|(${addrKifPattern})(${addrKifPattern})(?:同\s*)?)(${kindKifPattern})(?:(打)|([左右直])?([上下寄])?(不?成)?(?:\((${addrKifPattern})(${addrKifPattern})\))?))(?:\s*\(\s*(\d+):(\d+)(?:\s*/\s*\d+:\d+:\d+)?\s*\))?\+?`
 );
-const endKifPattern = endInfos.reduce((arr, info) => (info.kif && arr.push(info.name), arr), []).join('|');
-const moveKi2RegExp = new RegExp(
-  String.raw`^\s*(?:\d+\.?\s+)?(?:[☗☖▲△▽])?(?:(${endKifPattern})|(?:(同\s*)|(${addrKifPattern})(${addrKifPattern})(?:同\s*)?)(${kindKifPattern})(?:(打)|([左右直])?([上下寄])?(不?成)?(?:\((${addrKifPattern})(${addrKifPattern})\))?))(?:\s*\(\s*(\d+):(\d+)(?:\s*/\s*\d+:\d+:\d+)\s*\))?\+?`
-);
-
-export function parseMoveKif(moveKif, lastMove) {
-  const found = moveKif.match(moveKifRegExp);
-  if (!found) {
-    return 0;
-  }
-  const [, sameKif, toColKif, toRowKif, kindKif, droppedKif, promotedKif, fromColKif, fromRowKif] = found;
-  const to = sameKif ? getMoveTo(lastMove) : makeSquare(textColMap.get(toColKif), textRowMap.get(toRowKif));
-  if (droppedKif) {
-    return makeDrop(textKindMap.get(kindKif), to);
-  }
-  return makeMove(makeSquare(textColMap.get(fromColKif), textRowMap.get(fromRowKif)), to, promotedKif === '成');
-}
 
 export function parseGameKif(gameKif) {
   const game = parseGameUsi(defaultSfen);
@@ -1148,10 +1249,12 @@ export function parseGameKif(gameKif) {
       game.startStep.position.sideToMove = ch === '後' || ch === '上' ? 1 : 0;
       continue;
     }
-    for (let p = 0, found; (found = line.slice(p).match(moveKi2RegExp)); p += found[0].length) {
-      const [, endName, sm, toColS, toRowS, kindKif, dm, hm, vm, pm, fromColS, fromRowS] = found;
+    for (let p = 0, found; (found = line.slice(p).match(moveKifRegExp)); p += found[0].length) {
+      const [, endName, sm, toColS, toRowS, kindKif, dm, hm, vm, pm, fromColS, fromRowS, minS, secS] = found;
+      const lapTime = minS * 60_000 + secS * 1000 || 0;
+      let nextStep;
       if (endName) {
-        targetStep.appendEnd(endName);
+        nextStep = targetStep.appendEnd(endName, lapTime);
       } else {
         const to = sm ? getMoveTo(targetStep.move) : makeSquare(textColMap.get(toColS), textRowMap.get(toRowS));
         const kind = textKindMap.get(kindKif);
@@ -1170,9 +1273,12 @@ export function parseGameKif(gameKif) {
           }
         }
         if (move) {
-          targetStep = targetStep.appendMove(move);
-          numberSteps[targetStep.position.number] = targetStep;
+          nextStep = targetStep.appendMove(move, lapTime);
         }
+      }
+      if (nextStep) {
+        targetStep = nextStep;
+        numberSteps[targetStep.position.number] = targetStep;
       }
     }
   }
@@ -1225,6 +1331,9 @@ export function formatGameCsa(game) {
         (isMoveDropped(st.move) ? '00' : formatSquareCsa(getMoveFrom(st.move))) +
         formatSquareCsa(to) +
         kindInfos[getPieceKind(st.position.getPiece(to))].csa;
+    }
+    if (st.lapTimes[st.parent.position.sideToMove]) {
+      gameCsa += ',T' + Math.floor(st.lapTimes[st.parent.position.sideToMove] / 1000);
     }
     gameCsa += '\n';
   }
@@ -1336,6 +1445,9 @@ export function parseGameCsa(gameCsa) {
         game.startStep.position.sideToMove = ch === '-' ? 1 : 0;
       }
       continue;
+    }
+    if (ch === 'T') {
+      targetStep.lapTimes[targetStep.parent.position.sideToMove] = (parseInt(line.slice(1)) || 0) * 1000;
     }
     if (ch === '%') {
       const endCsa = line.slice(ch2 === '+' || ch2 === '-' ? 2 : 1);

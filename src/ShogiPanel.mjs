@@ -7,6 +7,7 @@ import { on } from './browser.mjs';
 import {
   colInfos,
   colN,
+  formatTimeMS,
   getCol,
   getMoveFrom,
   getMoveTo,
@@ -85,7 +86,7 @@ export default class ShogiPanel {
     this.addrFont = ~~(this.squareW * 0.3) + 'px sans-serif';
     this.matrix = [1, 0, 0, 1, 0, 0];
     this.lastFrameTime = 0;
-    this.clocks = ['', ''];
+    this.clockTimes = [-1, -1];
 
     new ResizeObserver(() => {
       const canvasRect = this.el.getBoundingClientRect();
@@ -108,7 +109,7 @@ export default class ShogiPanel {
   }
 
   onPoinerDown(pointer) {
-    if (!this.handler.onPointerBefore?.(pointer)) {
+    if (!this.handler?.onPointerBefore?.(pointer)) {
       return;
     }
     const canvasRect = this.el.getBoundingClientRect();
@@ -287,12 +288,13 @@ export default class ShogiPanel {
       this.renderText(context, sideInfos[side].char, sx + this.squareW / 2, sy + this.squareH / 2, side);
     }
 
-    context.font = this.playerFont;
-    for (const side of sides) {
-      if (this.clocks[side]) {
-        this.renderText(context, this.clocks[side], ...this.clockPoints[side], this.game.flipped);
-      }
+    for (const sq of [30, 33, 57, 60]) {
+      context.beginPath();
+      context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
+      context.fill();
     }
+
+    context.font = this.playerFont;
     for (const side of sides) {
       const playerTitle = (this.game.sideNames[side] + ' ' + this.game.playerNames[side]).trim();
       if (playerTitle) {
@@ -300,11 +302,13 @@ export default class ShogiPanel {
         this.renderText(context, playerTitle, ...this.playerPoints[side], this.game.flipped);
       }
     }
-
-    for (const sq of [30, 33, 57, 60]) {
-      context.beginPath();
-      context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
-      context.fill();
+    context.textAlign = 'center';
+    for (const side of sides) {
+      const clockTime = this.clockTimes[side];
+      if (clockTime >= 0) {
+        context.fillStyle = this.game.clocks[side].isLimited() && clockTime <= 10_000 ? '#f00' : '#000';
+        this.renderText(context, formatTimeMS(clockTime), ...this.clockPoints[side], this.game.flipped);
+      }
     }
 
     for (let sq = 0; sq < squareN; sq++) {
@@ -484,5 +488,35 @@ export default class ShogiPanel {
         },
       },
     ];
+  }
+
+  initClocks() {
+    for (const side of sides) {
+      const clock = this.game.clocks[side];
+      clock.init();
+      this.clockTimes[side] = clock.getTime();
+    }
+  }
+
+  startClock(side) {
+    clearInterval(this.intervalId);
+    const clock = this.game.clocks[side];
+    clock.start();
+    this.clockTimes[side] = clock.getTime();
+    this.intervalId = setInterval(() => {
+      const time = clock.getTime();
+      this.clockTimes[side] = time;
+      if (clock.isLimited() && time <= 0) {
+        clearInterval(this.intervalId);
+        this.handler?.onExpired?.();
+      }
+      this.request();
+    }, 200);
+  }
+
+  stopClock(side) {
+    clearInterval(this.intervalId);
+    this.clockTimes[side] = this.game.clocks[side].getTime();
+    return this.game.clocks[side].stop();
   }
 }

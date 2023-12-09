@@ -73,7 +73,7 @@ export default class CollectionView {
     this.limitItemMap = this.limitItems.reduce((map, item) => (map.set(item.limit, item), map), new Map());
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
-      this.app.popView(this);
+      this.hide();
     });
 
     on(this.el.querySelector('.SelectButton'), 'click', () => {
@@ -116,6 +116,10 @@ export default class CollectionView {
     }
     this.updateCounts();
     this.app.pushView(this);
+  }
+
+  hide() {
+    this.app.popView(this);
   }
 
   async start(startRecordOrder) {

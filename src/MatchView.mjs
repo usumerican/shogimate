@@ -13,6 +13,7 @@ import {
   parsePvInfoUsi,
   parsePvScore,
   sideInfos,
+  sides,
   usiEndNameMap,
 } from './shogi.mjs';
 
@@ -48,14 +49,17 @@ export default class MatchView {
     });
 
     on(this.el.querySelector('.UndoButton'), 'click', () => {
-      if (this.step.parent) {
-        this.step.appendEnd('待った');
-        let step = this.step.parent;
-        if (step.parent && this.isSideAuto(step)) {
-          step = step.parent;
+      if (!this.thinking) {
+        const targetStep = this.step;
+        if (targetStep.parent) {
+          this.appendEnd(targetStep, '待った');
+          let step = targetStep.parent;
+          if (step.parent && this.isSideAuto(step)) {
+            step = step.parent;
+          }
+          this.changeStep(step);
+          this.think();
         }
-        this.changeStep(step);
-        this.think();
       }
     });
 
@@ -79,9 +83,12 @@ export default class MatchView {
     });
 
     on(this.el.querySelector('.ResignButton'), 'click', async () => {
-      if (await new ConfirmView(this.app).show('投了しますか?', ['いいえ', 'はい'])) {
-        this.changeStep(this.step.appendEnd('投了'));
-        this.doBrowse();
+      if (!this.thinking) {
+        const targetStep = this.step;
+        if (await new ConfirmView(this.app).show('投了しますか?', ['いいえ', 'はい'])) {
+          this.changeStep(this.appendEnd(targetStep, '投了'));
+          this.doBrowse();
+        }
       }
     });
   }
@@ -89,6 +96,7 @@ export default class MatchView {
   show(title, game) {
     this.title = this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
+    this.shogiPanel.initClocks();
     this.changeStep(this.game.startStep);
     this.app.pushView(this);
     this.app.initAudio();
@@ -96,19 +104,26 @@ export default class MatchView {
   }
 
   hide() {
+    for (const side of sides) {
+      this.shogiPanel.stopClock(side);
+    }
     this.app.popView(this);
   }
 
   onPointerBefore() {
-    return !this.isSideAuto() && !this.step.endName;
+    return !this.thinking && !this.isSideAuto() && !this.step.endName;
   }
 
   onMove(move) {
-    const step = this.step.appendMove(move);
+    const nextStep = this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove));
     this.app.playPieceSound();
-    this.app.speakMoveText(formatStep(step));
-    this.changeStep(step);
+    this.app.speakMoveText(formatStep(nextStep));
+    this.changeStep(nextStep);
     this.think();
+  }
+
+  async onExpired() {
+    await this.endGame(this.step, '切れ負け');
   }
 
   changeStep(step) {
@@ -124,10 +139,10 @@ export default class MatchView {
   }
 
   async think() {
-    const progressView = new ProgressView(this.app);
-    progressView.show();
+    this.thinking = true;
     try {
       const targetStep = this.step;
+      this.shogiPanel.startClock(targetStep.position.sideToMove);
       targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
       targetStep.fromToMap = await this.app.engine.getFromToMap(targetStep.gameUsi);
       if (!targetStep.fromToMap.size) {
@@ -152,7 +167,7 @@ export default class MatchView {
         }
       }
     } finally {
-      progressView.hide();
+      this.thinking = false;
     }
   }
 
@@ -172,12 +187,16 @@ export default class MatchView {
   }
 
   async endGame(step, endName) {
+    this.changeStep(this.appendEnd(step, endName));
     await new ConfirmView(this.app).show(
       `${sideInfos[step.position.sideToMove].char}${this.game.sideNames[step.position.sideToMove]}の${endName}です。`,
       ['OK']
     );
-    this.changeStep(step.appendEnd(endName));
     this.doBrowse();
+  }
+
+  appendEnd(step, endName) {
+    return step.appendEnd(endName, this.shogiPanel.stopClock(step.position.sideToMove));
   }
 
   doBrowse() {
