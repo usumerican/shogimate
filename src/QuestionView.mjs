@@ -15,6 +15,7 @@ import {
   formatGameUsiFromLastStep,
   Game,
   Position,
+  sides,
 } from './shogi.mjs';
 
 export default class QuestionView {
@@ -95,7 +96,6 @@ export default class QuestionView {
 
     on(this.answerButton, 'click', () => {
       if (this.limit) {
-        this.stopClock();
         new BrowseView(this.app).show('解答例', this.answerGame);
       }
     });
@@ -135,9 +135,9 @@ export default class QuestionView {
       this.changed = true;
     }
     this.recordSelect.replaceChildren(...options);
-    this.updateRecord();
     this.app.pushView(this);
     this.app.initAudio();
+    this.updateRecord();
     return new Promise((resolve) => {
       this.resolve = resolve;
     });
@@ -148,7 +148,9 @@ export default class QuestionView {
   }
 
   hide(value) {
-    this.stopClock();
+    for (const side of sides) {
+      this.shogiPanel.stopClock(side);
+    }
     this.app.popView(this);
     if (this.resolve) {
       this.resolve(value);
@@ -186,7 +188,7 @@ export default class QuestionView {
     this.updateRecord();
   }
 
-  async updateRecord() {
+  updateRecord() {
     this.titleOutput.textContent = `${this.title} (${this.recordOrder + 1}/${this.records.length})`;
     this.recordSelect.value = this.recordOrder;
     this.recordPrevButton.disabled = !this.canRecordPrev();
@@ -210,27 +212,26 @@ export default class QuestionView {
     this.startStep = new Step({ position });
     this.game.startStep = this.startStep;
     this.shogiPanel.game = this.game;
-    this.shogiPanel.clocks[this.startSide] = '';
-    this.shogiPanel.clocks[this.startSide ^ 1] = '';
+    this.shogiPanel.initClocks();
     this.changeStep(this.startStep);
-    this.startClock();
     this.think();
   }
 
   canReset() {
-    return this.step.parent;
+    return !this.thinking && this.step.parent;
   }
 
   doReset() {
     if (this.canReset()) {
-      this.step.appendEnd('中断');
+      this.appendEnd('中断');
       this.changeStep(this.startStep);
+      this.think();
     }
   }
 
   doUndo() {
     if (this.canReset()) {
-      this.step.appendEnd('待った');
+      this.appendEnd('待った');
       let st = this.step.endName ? this.step.parent?.parent : this.step.parent;
       for (; st; st = st.parent) {
         if (st.position.sideToMove === this.startStep.position.sideToMove) {
@@ -238,41 +239,26 @@ export default class QuestionView {
         }
       }
       this.changeStep(st || this.startStep);
+      this.think();
     }
   }
 
-  startClock() {
-    this.stopClock();
-    this.startTime = Date.now();
-    this.clockId = setInterval(() => {
-      const time = Date.now() - this.startTime;
-      this.shogiPanel.clocks[this.startSide] =
-        Math.floor(time / 60_000) + ':' + ('' + (Math.floor(time / 1000) % 60)).padStart(2, '0');
-      this.shogiPanel.request();
-    }, 200);
-  }
-
-  stopClock() {
-    clearInterval(this.clockId);
-    this.clockId = 0;
-  }
-
   onPointerBefore() {
-    return this.step.position.sideToMove === this.startSide && !this.isExceeded();
+    return !this.thinking && this.step.position.sideToMove === this.startSide && !this.isExceeded();
   }
 
   async onMove(move) {
-    const step = this.step.appendMove(move);
+    const nextStep = this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove));
     this.app.playPieceSound();
-    this.app.speakMoveText(formatStep(step));
-    this.changeStep(step);
+    this.app.speakMoveText(formatStep(nextStep));
+    this.changeStep(nextStep);
     this.think();
   }
 
   async think() {
-    const progressView = new ProgressView(this.app);
-    progressView.show();
+    this.thinking = true;
     try {
+      this.shogiPanel.startClock(this.step.position.sideToMove);
       const manual = this.step.position.sideToMove === this.startSide;
       if (manual && this.isExceeded()) {
         this.endGame('不詰');
@@ -301,19 +287,22 @@ export default class QuestionView {
         this.endGame(usiEndNameMap.get(moveUsi) || moveUsi);
       }
     } finally {
-      progressView.hide();
+      this.thinking = false;
     }
   }
 
   endGame(endName, success) {
-    this.stopClock();
-    this.changeStep(this.step.appendEnd(endName));
-    const [message, background] = success ? ['成功', '#cfc6'] : ['失敗', '#fcc6'];
-    new ProgressView(this.app).show(message, background, 1000);
+    this.changeStep(this.appendEnd(endName));
+    new ProgressView(this.app).show(...(success ? ['成功', '#cfc6'] : ['失敗', '#fcc6']), 1000);
+  }
+
+  appendEnd(endName) {
+    return this.step.appendEnd(endName, this.shogiPanel.stopClock(this.step.position.sideToMove));
   }
 
   changeStep(step) {
     this.step = step;
+    this.thinking = false;
     this.resetButton.disabled = !this.canReset();
     this.undoButton.disabled = !this.canReset();
     this.shogiPanel.changeStep(this.step);

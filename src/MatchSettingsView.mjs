@@ -4,7 +4,7 @@ import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
-import { parseGameUsi, sideInfos, sides, startInfos, startNameSfenMap } from './shogi.mjs';
+import { parseGameUsi, sideInfos, sides, startInfos, startNameSfenMap, timingInfos } from './shogi.mjs';
 
 export default class MatchSettingsView {
   constructor(app) {
@@ -29,6 +29,11 @@ export default class MatchSettingsView {
             <input class="PositionSfenInput" placeholder="指定局面SFEN" />
           </div>
           <div class="ToolBar">
+            <select class="MainTimeSelect"></select>
+            <select class="ExtraTimeSelect"></select>
+            <select class="TimingNameSelect"></select>
+          </div>
+          <div class="ToolBar">
             <button class="CloseButton">キャンセル</button>
             <button class="StartButton">開始</button>
           </div>
@@ -43,6 +48,21 @@ export default class MatchSettingsView {
     this.levelSelect.replaceChildren(...[...Array(21).keys()].map((i) => new Option(`レベル ${i}`, i)));
     this.positionSpecifiedCheckbox = this.el.querySelector('.PositionSpecifiedCheckbox');
     this.positionSfenInput = this.el.querySelector('.PositionSfenInput');
+    this.mainTimeSelect = this.el.querySelector('.MainTimeSelect');
+    this.mainTimeSelect.replaceChildren(
+      ...[0, 10, 20, 30, 40, 50].map((sec) => new Option(sec + '秒', sec * 1000)),
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
+        (min) => new Option(min + '分', min * 60_000)
+      )
+    );
+    this.extraTimeSelect = this.el.querySelector('.ExtraTimeSelect');
+    this.extraTimeSelect.replaceChildren(
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
+        (sec) => new Option('+' + sec + '秒', sec * 1000)
+      )
+    );
+    this.timingNameSelect = this.el.querySelector('.TimingNameSelect');
+    this.timingNameSelect.replaceChildren(...timingInfos.map((info) => new Option(info.title, info.name)));
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
@@ -61,6 +81,18 @@ export default class MatchSettingsView {
     });
 
     on(this.autoSelect, 'change', () => {
+      this.update();
+    });
+
+    on(this.mainTimeSelect, 'change', () => {
+      this.update();
+    });
+
+    on(this.extraTimeSelect, 'change', () => {
+      this.update();
+    });
+
+    on(this.timingNameSelect, 'change', () => {
       this.update();
     });
 
@@ -94,6 +126,9 @@ export default class MatchSettingsView {
           startName: this.game.startName,
           auto,
           level: this.game.level,
+          mainTime: this.game.mainTime,
+          extraTime: this.game.extraTime,
+          timingName: this.game.timingName,
         };
         this.app.saveSettings();
       }
@@ -108,6 +143,9 @@ export default class MatchSettingsView {
     setSelectValue(this.levelSelect, level);
     this.positionSpecifiedCheckbox.checked = positionSpecified;
     this.positionSfenInput.value = positionSfen || '';
+    setSelectValue(this.mainTimeSelect, this.app.settings.match?.mainTime);
+    setSelectValue(this.extraTimeSelect, this.app.settings.match?.extraTime);
+    setSelectValue(this.timingNameSelect, this.app.settings.match?.timingName);
     this.temporary = temporary;
     this.update();
     this.app.pushView(this);
@@ -123,12 +161,16 @@ export default class MatchSettingsView {
         startNameSfenMap.get(this.startSelect.value)
     );
     this.game.flipped = +this.autoSelect.value === 1 ? 1 : 0;
+    this.game.mainTime = +this.mainTimeSelect.value;
+    this.game.extraTime = +this.extraTimeSelect.value;
+    this.game.timingName = this.timingNameSelect.value;
     const key = this.startSelect.selectedIndex ? 'alias' : 'name';
     for (const side of sides) {
       this.autoSelect.options[side + 1].text =
         sideInfos[side].char + (this.game.sideNames[side] = sideInfos[side][key]);
     }
     this.shogiPanel.step = this.game.startStep;
+    this.shogiPanel.initClocks();
     this.shogiPanel.request();
   }
 }

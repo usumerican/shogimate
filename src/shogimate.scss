@@ -379,12 +379,12 @@
 
     .Content {
       background: $themeColor;
-      width: 90%;
-      height: 90%;
+      width: 95%;
+      height: 95%;
       padding: $gap;
       display: grid;
       gap: $gap;
-      grid-template-rows: $rowH 1fr $toolH $toolH $toolH;
+      grid-template-rows: $rowH 1fr $toolH $toolH $toolH $toolH;
       place-items: stretch;
 
       .ShogiPanel {

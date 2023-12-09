@@ -167,9 +167,10 @@ export default class App {
       }
       const i = this.viewStack.indexOf(view);
       if (i >= 0) {
-        this.viewStack.splice(i, 1);
+        for (const v of this.viewStack.splice(0, i + 1)) {
+          this.root.removeChild(v.el);
+        }
       }
-      this.root.removeChild(view.el);
       if (this.viewStack[0] !== currView) {
         this.focusView(this.viewStack[0]);
       }

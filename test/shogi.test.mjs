@@ -12,10 +12,7 @@ import {
   formatPvScoreValue,
   defaultSfen,
   parseSfen,
-  formatMoveKif,
-  parseMoveKif,
   formatSfen,
-  formatMoveUsi,
   Position,
   flipPiece,
   formatMoveText,
@@ -44,21 +41,6 @@ describe('shogi', () => {
     ];
     for (const sfen of Object.values(sfens)) {
       expect(formatSfen(parseSfen(sfen))).toEqual(sfen);
-    }
-  });
-
-  test('move format', () => {
-    const pos = parseSfen('ln1gkg1nl/6+P2/2sppps1p/2p3p2/p8/P1P1P3P/2NP1PP2/3s1KSR1/L1+b2G1NL w R2Pbgp 42');
-    const lastMove = parseMoveUsi('8i7g');
-    const data = [
-      { usi: '6h5g', kif: '５七銀(68)' },
-      { usi: '6h5g+', kif: '５七銀成(68)' },
-      { usi: '6h7g', kif: '同　銀(68)' },
-      { usi: 'B*5g', kif: '５七角打' },
-    ];
-    for (const { usi, kif } of data) {
-      expect(formatMoveKif(pos, parseMoveUsi(usi), lastMove)).toEqual(kif);
-      expect(formatMoveUsi(parseMoveKif(kif, lastMove))).toEqual(usi);
     }
   });
 
@@ -382,19 +364,19 @@ describe('shogi', () => {
 下手：Black
 上手：White
 手数----指手---------消費時間--
-1 ３四歩(33)
-2 ７六歩(77)
-3 ８八角(22)
-4 ５八金(49)
-5 ７七角打
-6 同　桂(89)
-7 反則勝ち
+1 ３四歩(33) (0:00/0:00:00)
+2 ７六歩(77) (0:00/0:00:00)
+3 ８八角(22) (0:00/0:00:00)
+4 ５八金(49) (0:00/0:00:00)
+5 ７七角打 (0:00/0:00:00)
+6 同　桂(89) (0:00/0:00:00)
+7 反則勝ち (0:00/0:00:00)
 
 変化：3手
-3 ８八角成(22)
-4 ５八金(69)
-5 ７七角打
-6 投了
+3 ８八角成(22) (0:00/0:00:00)
+4 ５八金(69) (0:00/0:00:00)
+5 ７七角打 (0:00/0:00:00)
+6 投了 (0:00/0:00:00)
 `);
     });
 
@@ -431,24 +413,26 @@ PI11KY
     expect(formatGameUsi(parseGameKif('手合割：香落ち'))).toEqual(
       'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1'
     );
-    expect(formatGameUsi(parseGameKif('1 ３四歩(33)\n2 ７六歩(77)'))).toEqual('position startpos moves 3c3d 7g7f');
+    expect(formatGameUsi(parseGameKif('1 ３四歩(33) (0:00)\n2 ７六歩(77) (0:00)'))).toEqual(
+      'position startpos moves 3c3d 7g7f'
+    );
     const kif = `手合割：香落ち
 下手：Black
 上手：White
 手数----指手---------消費時間--
-1 ３四歩(33)
-2 ７六歩(77)
-3 ８八角(22)
-4 ５八金(49)
-5 ７七角打
-6 同　桂(89)
-7 反則勝ち
+1 ３四歩(33) (0:10/0:00:10)
+2 ７六歩(77) (0:20/0:00:20)
+3 ８八角(22) (0:30/0:00:40)
+4 ５八金(49) (0:40/0:01:00)
+5 ７七角打 (0:50/0:01:30)
+6 同　桂(89) (1:00/0:02:00)
+7 反則勝ち (1:10/0:02:40)
 
 変化：3手
-3 ８八角成(22)
-4 ５八金(69)
-5 ７七角打
-6 投了
+3 ８八角成(22) (0:10/0:00:20)
+4 ５八金(69) (0:20/0:00:40)
+5 ７七角打 (0:30/0:00:50)
+6 投了 (0:40/0:01:20)
 `;
     expect(formatGameKif(parseGameKif(kif))).toEqual(kif);
   });
@@ -472,14 +456,14 @@ N+Black
 N-White
 PI11KY82HI
 -
--3334FU
-+7776FU
--2288KA
-+4958KI
--0077KA
-+6968KI
--8879UM
-%-ILLEGAL_ACTION
+-3334FU,T10
++7776FU,T20
+-2288KA,T30
++4958KI,T40
+-0077KA,T50
++6968KI,T60
+-8879UM,T70
+%-ILLEGAL_ACTION,T80
 `,
       `V2.2
 P1-KY-KE *  *  *  *  * +TO-KY

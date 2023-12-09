@@ -84,7 +84,7 @@ export default class ResearchView {
     this.game = this.shogiPanel.game = game;
     setSelectValue(this.timeSelect, this.app.settings.research?.time);
     setSelectValue(this.mpvSelect, this.app.settings.research?.mpv);
-    this.changeStep(new Step(step));
+    this.changeStep(new Step(step.endName && step.parent ? step.parent : step));
     this.app.pushView(this);
     this.app.initAudio();
     await this.doResearch();
