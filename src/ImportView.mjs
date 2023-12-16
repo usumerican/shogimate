@@ -1,4 +1,4 @@
-import { on, parseHtml } from './browser.mjs';
+import { on, parseHtml, setTextareaValue } from './browser.mjs';
 import { parseGameCsa, parseGameKif, parseGameUsi } from './shogi.mjs';
 
 export default class ImportView {
@@ -12,6 +12,7 @@ export default class ImportView {
         <button class="FileButton">ファイル選択</button>
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>
+          <button class="PasteButton">貼り付け</button>
           <button class="SubmitButton">読み込み</button>
         </div>
       </div>
@@ -20,6 +21,10 @@ export default class ImportView {
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
+    });
+
+    on(this.el.querySelector('.PasteButton'), 'click', async () => {
+      setTextareaValue(this.textInput, await this.app.readFromClipboard());
     });
 
     on(this.el.querySelector('.SubmitButton'), 'click', () => {

@@ -10,7 +10,6 @@ import {
   parseMoveUsi,
   parsePvScore,
   formatPvScoreValue,
-  defaultSfen,
   parseSfen,
   formatSfen,
   Position,
@@ -34,7 +33,8 @@ import {
 describe('shogi', () => {
   test('sfen', () => {
     const sfens = [
-      defaultSfen,
+      '9/9/9/9/9/9/9/9/9 b - 1', //empty
+      'lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1', // default
       'lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1', // handicap
       'l6nl/5+P1gk/2np1S3/p1p4Pp/3P2Sp1/1PPb2P1P/P5GS1/R8/LN4bKL w RGgsn5p 1', // matsuri
       'ln5+Pl/3s1kg+R1/p2ppl2p/2ps1Bp2/P8/2P3P1P/N2gP4/5KS2/L+r3G1N+b b GS3Pn3p 57', // pinned mate problem
@@ -349,8 +349,8 @@ describe('shogi', () => {
 
     beforeAll(() => {
       game.startName = '香落ち';
-      game.sideNames = ['下手', '上手'];
-      game.playerNames = ['Black', 'White'];
+      game.players[0].name = 'Black';
+      game.players[1].name = 'White';
       game.startStep.children[0].children[0].children[0].children[0].children[0].children[0].appendEnd('反則勝ち');
       game.startStep.children[0].children[0]
         .appendMoveUsi('2b8h+')

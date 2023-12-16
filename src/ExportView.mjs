@@ -27,7 +27,7 @@ export default class ExportView {
       {
         name: 'position.bod',
         title: '局面 (BOD)',
-        handler: () => formatBod(this.step.position, this.game.sideNames, this.step.position.number),
+        handler: () => formatBod(this.step.position, this.game.getSideNames(), this.step.position.number),
       },
       { name: 'position.sfen', title: '局面 (SFEN)', handler: () => formatSfen(this.step.position) },
     ];

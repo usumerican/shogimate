@@ -89,12 +89,6 @@ export default class ShogiPanel {
     this.clockTimes = [-1, -1];
 
     new ResizeObserver(() => {
-      const canvasRect = this.el.getBoundingClientRect();
-      this.el.width = canvasRect.width * devicePixelRatio;
-      this.el.height = canvasRect.height * devicePixelRatio;
-      this.matrix[0] = this.matrix[3] = Math.min(this.el.width / this.stageW, this.el.height / this.stageH);
-      this.matrix[4] = this.el.width / 2;
-      this.matrix[5] = this.el.height / 2;
       this.request();
     }).observe(this.el);
 
@@ -191,6 +185,12 @@ export default class ShogiPanel {
     requestAnimationFrame((frameTime) => {
       if (frameTime !== this.lastFrameTime) {
         this.lastFrameTime = frameTime;
+        const canvasRect = this.el.getBoundingClientRect();
+        this.el.width = canvasRect.width * devicePixelRatio;
+        this.el.height = canvasRect.height * devicePixelRatio;
+        this.matrix[0] = this.matrix[3] = Math.min(this.el.width / this.stageW, this.el.height / this.stageH);
+        this.matrix[4] = this.el.width / 2;
+        this.matrix[5] = this.el.height / 2;
         const context = this.el.getContext('2d');
         context.save();
         try {
@@ -296,7 +296,7 @@ export default class ShogiPanel {
 
     context.font = this.playerFont;
     for (const side of sides) {
-      const playerTitle = (this.game.sideNames[side] + ' ' + this.game.playerNames[side]).trim();
+      const playerTitle = (this.game.getSideName(side) + ' ' + this.game.players[side].name).trim();
       if (playerTitle) {
         context.textAlign = side ^ this.game.flipped ? 'left' : 'right';
         this.renderText(context, playerTitle, ...this.playerPoints[side], this.game.flipped);
@@ -306,25 +306,23 @@ export default class ShogiPanel {
     for (const side of sides) {
       const clockTime = this.clockTimes[side];
       if (clockTime >= 0) {
-        context.fillStyle = this.game.clocks[side].isLimited() && clockTime <= 10_000 ? '#f00' : '#000';
+        context.fillStyle = this.game.players[side].isTimeLimited() && clockTime <= 10_000 ? '#f00' : '#000';
         this.renderText(context, formatTimeMS(clockTime), ...this.clockPoints[side], this.game.flipped);
       }
     }
 
     for (let sq = 0; sq < squareN; sq++) {
-      const [x, y] = this.getSquarePoint(sq);
       const piece = this.step.position.getPiece(sq);
       if (piece) {
-        this.renderPiece(context, getPieceSide(piece), getPieceKind(piece), x, y);
+        this.renderPiece(context, getPieceSide(piece), getPieceKind(piece), this.getSquarePoint(sq));
       }
     }
 
     for (const side of sides) {
       for (const base of handBases) {
-        const [x, y] = this.getHandPoint(side, base);
         const handCount = this.step.position.getHandCount(side, base);
         if (handCount) {
-          this.renderPiece(context, side, base, x, y, handCount);
+          this.renderPiece(context, side, base, this.getHandPoint(side, base), handCount);
         }
       }
     }
@@ -359,7 +357,7 @@ export default class ShogiPanel {
     return [rect[0] + this.squareW * (side ? handBaseN - 1 - order : order), rect[1]];
   }
 
-  renderPiece(context, side, kind, x, y, count) {
+  renderPiece(context, side, kind, [x, y], count) {
     context.save();
     try {
       const cos = side ? -1 : 1;
@@ -492,21 +490,21 @@ export default class ShogiPanel {
 
   initClocks() {
     for (const side of sides) {
-      const clock = this.game.clocks[side];
-      clock.init();
-      this.clockTimes[side] = clock.getTime();
+      const player = this.game.players[side];
+      player.initRestTime();
+      this.clockTimes[side] = player.getClockTime();
     }
   }
 
   startClock(side) {
     clearInterval(this.intervalId);
-    const clock = this.game.clocks[side];
-    clock.start();
-    this.clockTimes[side] = clock.getTime();
+    const player = this.game.players[side];
+    player.startClock();
+    this.clockTimes[side] = player.getClockTime();
     this.intervalId = setInterval(() => {
-      const time = clock.getTime();
-      this.clockTimes[side] = time;
-      if (clock.isLimited() && time <= 0) {
+      const clockTime = player.getClockTime();
+      this.clockTimes[side] = clockTime;
+      if (player.isTimeLimited() && clockTime <= 0) {
         clearInterval(this.intervalId);
         this.handler?.onExpired?.();
       }
@@ -516,7 +514,8 @@ export default class ShogiPanel {
 
   stopClock(side) {
     clearInterval(this.intervalId);
-    this.clockTimes[side] = this.game.clocks[side].getTime();
-    return this.game.clocks[side].stop();
+    const player = this.game.players[side];
+    this.clockTimes[side] = player.getClockTime();
+    return player.stopClock();
   }
 }
