@@ -59,7 +59,7 @@ export default class BrowseView {
             new MatchSettingsView(this.app).show(
               {
                 startName: this.game.startName,
-                auto: currStep.position.sideToMove ? 1 : 2,
+                automation: currStep.position.sideToMove ? 1 : 2,
                 level: this.game.level,
                 positionSpecified: true,
                 positionSfen: formatSfen(currStep.position),

@@ -2,6 +2,7 @@ import BrowseView from './BrowseView.mjs';
 import ConfirmView from './ConfirmView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
+import ResumeView from './ResumeView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import { on, parseHtml, setTextareaValue } from './browser.mjs';
 import {
@@ -30,6 +31,7 @@ export default class MatchView {
         <canvas class="ShogiPanel"></canvas>
         <textarea class="HintOutput" readonly></textarea>
         <div class="ToolBar">
+          <label class="LabelCenter"><input type="checkbox" class="AdjournCheckbox" />封じ手</label>
           <button class="UndoButton">待った</button>
           <button class="HintButton">ヒント</button>
           <button class="ResignButton">投了</button>
@@ -39,6 +41,7 @@ export default class MatchView {
     this.titleOutput = this.el.querySelector('.TitleOutput');
     this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
     this.hintOutput = this.el.querySelector('.HintOutput');
+    this.adjournCheckbox = this.el.querySelector('.AdjournCheckbox');
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
@@ -54,7 +57,7 @@ export default class MatchView {
         if (targetStep.parent) {
           this.appendEnd(targetStep, '待った');
           let step = targetStep.parent;
-          if (step.parent && this.isSideAuto(step)) {
+          if (step.parent && this.isAutomatic(step)) {
             step = step.parent;
           }
           this.changeStep(step);
@@ -93,11 +96,17 @@ export default class MatchView {
     });
   }
 
-  show(title, game) {
+  show(title, game, lastStep = game.startStep) {
     this.title = this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
-    this.shogiPanel.initClocks();
-    this.changeStep(this.game.startStep);
+    if (lastStep === this.game.startStep) {
+      this.shogiPanel.initClocks();
+    } else {
+      for (const side of sides) {
+        this.shogiPanel.clockTimes[side] = this.game.players[side].restTime;
+      }
+    }
+    this.changeStep(lastStep);
     this.app.pushView(this);
     this.app.initAudio();
     this.think();
@@ -111,7 +120,7 @@ export default class MatchView {
   }
 
   onPointerBefore() {
-    return !this.thinking && !this.isSideAuto() && !this.step.endName;
+    return !this.thinking && !this.isAutomatic() && !this.step.endName;
   }
 
   onMove(move) {
@@ -119,7 +128,14 @@ export default class MatchView {
     this.app.playPieceSound();
     this.app.speakMoveText(formatStep(nextStep));
     this.changeStep(nextStep);
-    this.think();
+    if (this.adjournCheckbox.checked) {
+      this.app.settings.adjournedGame = this.game.toObject();
+      this.app.saveSettings();
+      this.hide();
+      new ResumeView(this.app).show();
+    } else {
+      this.think();
+    }
   }
 
   async onExpired() {
@@ -150,7 +166,7 @@ export default class MatchView {
         return;
       }
       targetStep.analysis = await this.analyze(targetStep, 500);
-      if (this.isSideAuto()) {
+      if (this.isAutomatic()) {
         const moveUsi = (
           await Promise.all([
             this.app.engine.bestmove(targetStep.gameUsi, 100, this.game.level),
@@ -182,14 +198,14 @@ export default class MatchView {
     return pvInfo;
   }
 
-  isSideAuto(step = this.step) {
-    return (1 << step.position.sideToMove) & this.game.auto;
+  isAutomatic(step = this.step) {
+    return this.game.isSideAutomatic(step.position.sideToMove);
   }
 
   async endGame(step, endName) {
     this.changeStep(this.appendEnd(step, endName));
     await new ConfirmView(this.app).show(
-      `${sideInfos[step.position.sideToMove].char}${this.game.sideNames[step.position.sideToMove]}の${endName}です。`,
+      `${sideInfos[step.position.sideToMove].char}${this.game.getSideName(step.position.sideToMove)}の${endName}です。`,
       ['OK']
     );
     this.doBrowse();

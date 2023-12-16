@@ -178,6 +178,7 @@ export default class App {
   }
 
   focusView(view) {
+    view.onFocus?.();
     view.el.querySelector('button:not(:disabled)')?.focus();
   }
 
@@ -260,6 +261,15 @@ export default class App {
   async writeToClipboard(text) {
     await navigator.clipboard.writeText(text);
     await new ConfirmView(this).show('クリップボードにコピーしました。', ['OK']);
+  }
+
+  async readFromClipboard() {
+    try {
+      return await navigator.clipboard.readText();
+    } catch (e) {
+      console.error(e);
+    }
+    return '';
   }
 
   initAudio() {

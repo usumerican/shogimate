@@ -40,7 +40,7 @@ export default class CollectionView {
     this.limitItems = limitTitles.map(([limit, title]) => {
       const item = parseHtml(`
         <div class="LimitItem">
-          <label>
+          <label class="LabelLeft">
             <input type="checkbox" />
             <span class="TitleOutput"></span>
             <span class="CountOutput"></span>

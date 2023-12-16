@@ -5,6 +5,7 @@ import CollectionView from './CollectionView.mjs';
 import ImportView from './ImportView.mjs';
 import MatchSettingsView from './MatchSettingsView.mjs';
 import QuestionView from './QuestionView.mjs';
+import ResumeView from './ResumeView.mjs';
 import SettingsView from './SettingsView.mjs';
 import { on, openUrl, parseHtml, setSelectValue } from './browser.mjs';
 
@@ -22,6 +23,7 @@ export default class HomeView {
         <button class="CollectionButton">コレクション</button>
         <button class="ImportButton">棋譜の読み込み</button>
         <button class="MatchButton">AI 対局</button>
+        <button class="ResumeButton">封じ手</button>
         <div class="ToolBar">
           <button class="InfoButton">ソース</button>
           <button class="SettingsButton">アプリ設定</button>
@@ -33,6 +35,7 @@ export default class HomeView {
     this.bookSelect = this.el.querySelector('.BookSelect');
     this.volumeSelect = this.el.querySelector('.VolumeSelect');
     this.continueButton = this.el.querySelector('.ContinueButton');
+    this.resumeButton = this.el.querySelector('.ResumeButton');
 
     on(this.el.querySelector('.InfoButton'), 'click', () => {
       openUrl('https://github.com/usumerican/shogimate');
@@ -51,7 +54,7 @@ export default class HomeView {
     });
 
     on(this.volumeSelect, 'change', () => {
-      this.updateContinueButton();
+      this.updateButtons();
     });
 
     on(this.continueButton, 'click', () => {
@@ -80,13 +83,22 @@ export default class HomeView {
     on(this.el.querySelector('.MatchButton'), 'click', () => {
       new MatchSettingsView(this.app).show(this.app.settings.match);
     });
+
+    on(this.resumeButton, 'click', () => {
+      if (this.app.settings.adjournedGame) {
+        new ResumeView(this.app).show();
+      }
+    });
   }
 
   show() {
     this.bookSelect.replaceChildren(...[...this.app.bookMap.values()].map((book) => new Option(book.title, book.name)));
     setSelectValue(this.bookSelect, this.app.getState(['bn']));
-    this.updateVolumeSelect();
     this.app.pushView(this);
+  }
+
+  onFocus() {
+    this.updateVolumeSelect();
   }
 
   async start(mode) {
@@ -106,7 +118,7 @@ export default class HomeView {
         volume,
         this.app.getState(['bs', book.name, 'vs', volume.name])
       );
-      this.updateContinueButton();
+      this.updateButtons();
     }
   }
 
@@ -119,14 +131,14 @@ export default class HomeView {
     }
     this.volumeSelect.replaceChildren(...options);
     setSelectValue(this.volumeSelect, bookState?.vn);
-    this.updateContinueButton();
+    this.updateButtons();
   }
 
   formatVolumeOption(volume, volumeState) {
     return volume.title + (volumeState?.rc ? ` (${(volumeState?.ro || 0) + 1}/${volumeState.rc})` : '');
   }
 
-  updateContinueButton() {
+  updateButtons() {
     this.continueButton.disabled = !this.app.getState([
       'bs',
       this.bookSelect.value,
@@ -134,5 +146,6 @@ export default class HomeView {
       this.volumeSelect.value,
       'ro',
     ]);
+    this.resumeButton.disabled = !this.app.settings.adjournedGame;
   }
 }

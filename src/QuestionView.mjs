@@ -197,8 +197,8 @@ export default class QuestionView {
     this.answerGame = parseGameUsi(gameUsi);
     this.startSide = this.answerGame.startStep.position.sideToMove;
     this.answerGame.flipped = this.startSide;
-    this.answerGame.playerNames[this.startSide] = '攻方';
-    this.answerGame.playerNames[this.startSide ^ 1] = '受方';
+    this.answerGame.players[this.startSide].name = '攻方';
+    this.answerGame.players[this.startSide ^ 1].name = '受方';
     this.limit = 0;
     for (let st = this.answerGame.startStep.children[0]; st && st.move; st = st.children[0]) {
       this.limit++;

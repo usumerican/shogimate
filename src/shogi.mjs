@@ -833,14 +833,44 @@ export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set
 export const csaEndNameMap = endInfos.reduce((map, info) => (info.csa && map.set(info.csa, info.name), map), new Map());
 
 export class Step {
-  constructor({ parent, children, move, position, capturedPiece, endName, lapTimes } = {}) {
+  constructor({ parent, children, move, position, capturedPiece, endName, lapTime } = {}) {
     this.parent = parent;
     this.children = children?.slice() || [];
     this.move = move || 0;
     this.position = position;
     this.capturedPiece = capturedPiece || 0;
     this.endName = endName || '';
-    this.lapTimes = lapTimes?.slice() || [0, 0];
+    this.lapTime = lapTime || 0;
+  }
+
+  toObject() {
+    const step = {
+      children: this.children.map((child) => child.toObject()),
+      move: this.move,
+      endName: this.endName,
+      lapTime: this.lapTime,
+    };
+    if (!this.parent) {
+      step.sfen = formatSfen(this.position);
+    }
+    return step;
+  }
+
+  static fromObject({ children, move, endName, lapTime, sfen }, parent) {
+    let step;
+    if (parent) {
+      if (endName) {
+        step = parent.appendEnd(endName, lapTime);
+      } else {
+        step = parent.appendMove(move, lapTime);
+      }
+    } else {
+      step = new Step({ position: parseSfen(sfen) });
+    }
+    for (const child of children) {
+      Step.fromObject(child, step);
+    }
+    return step;
   }
 
   isMove() {
@@ -858,9 +888,8 @@ export class Step {
       move,
       position,
       capturedPiece,
-      lapTimes: this.lapTimes,
+      lapTime,
     });
-    step.lapTimes[this.position.sideToMove] = lapTime;
     this.children.push(step);
     return step;
   }
@@ -873,9 +902,8 @@ export class Step {
       parent: this,
       position: this.position,
       endName,
-      lapTimes: this.lapTimes,
+      lapTime,
     });
-    step.lapTimes[this.position.sideToMove] = lapTime;
     this.children.push(step);
     return step;
   }
@@ -964,17 +992,32 @@ export const timingInfos = [
   { name: FISCHER, title: 'フィッシャー' },
 ];
 
-export class Clock {
-  constructor(mainTime, extraTime, timingName) {
+export class Player {
+  constructor({ name, timingName, mainTime, extraTime, restTime } = {}) {
+    this.name = name || '';
+    this.timingName = timingName || '';
     this.mainTime = mainTime || 0;
     this.extraTime = extraTime || 0;
-    this.timingName = timingName || '';
+    this.restTime = restTime || 0;
     this.startTime = 0;
-    this.restTime = 0;
   }
 
-  init() {
-    if (this.isLimited()) {
+  toObject() {
+    return {
+      name: this.name,
+      timingName: this.timingName,
+      mainTime: this.mainTime,
+      extraTime: this.extraTime,
+      restTime: this.restTime,
+    };
+  }
+
+  isTimeLimited() {
+    return this.timingName && (this.mainTime || this.extraTime);
+  }
+
+  initRestTime() {
+    if (this.isTimeLimited()) {
       this.restTime = this.mainTime;
       if (this.timingName === BYOYOMI || (this.timingName === FISCHER && !this.mainTime)) {
         this.restTime += this.extraTime;
@@ -984,14 +1027,14 @@ export class Clock {
     }
   }
 
-  start(now = Date.now()) {
+  startClock(now = Date.now()) {
     this.startTime = now;
     if (this.timingName === BYOYOMI && this.restTime > 0 && this.restTime < this.extraTime) {
       this.restTime = this.extraTime;
     }
   }
 
-  stop(now = Date.now()) {
+  stopClock(now = Date.now()) {
     const lapTime = this.startTime ? Math.floor((now - this.startTime) / 1000) * 1000 : 0;
     this.startTime = 0;
     this.restTime -= lapTime;
@@ -1001,54 +1044,85 @@ export class Clock {
     return lapTime;
   }
 
-  getTime(now = Date.now()) {
+  getClockTime(now = Date.now()) {
     const dt = this.startTime ? now - this.startTime : 0;
     const time = Math.ceil((this.restTime - dt) / 1000) * 1000;
-    return this.isLimited() ? time : -time;
-  }
-
-  isLimited() {
-    return this.mainTime || this.extraTime;
+    return this.isTimeLimited() ? time : -time;
   }
 }
 
 export class Game {
-  constructor({ startStep, flipped, startName, sideNames, playerNames, clocks } = {}) {
+  constructor({ startStep, flipped, startName, automation, level, players } = {}) {
     this.startStep = startStep;
     this.flipped = flipped || 0;
     this.startName = startName || '';
-    this.sideNames = sideNames?.slice() || ['', ''];
-    this.playerNames = playerNames?.slice() || ['', ''];
-    this.clocks = clocks?.slice() || [new Clock(), new Clock()];
+    this.automation = automation;
+    this.level = level;
+    this.players = players?.map((player) => new Player(player)) || [new Player(), new Player()];
+  }
+
+  toObject() {
+    return {
+      startStepObject: this.startStep.toObject(),
+      flipped: this.flipped,
+      startName: this.startName,
+      automation: this.automation,
+      level: this.level,
+      playerObjects: this.players.map((player) => player.toObject()),
+    };
+  }
+
+  static fromObject({ startStepObject, flipped, startName, automation, level, playerObjects }) {
+    return new Game({
+      startStep: Step.fromObject(startStepObject),
+      flipped,
+      startName,
+      automation,
+      level,
+      players: playerObjects.map((obj) => new Player(obj)),
+    });
+  }
+
+  getSideName(side) {
+    const sideInfo = sideInfos[side];
+    return !this.startName || this.startName === defaultStartName ? sideInfo.name : sideInfo.alias;
+  }
+
+  getSideNames() {
+    return sides.map((side) => this.getSideName(side));
+  }
+
+  isSideAutomatic(side) {
+    return this.automation & (1 << side);
   }
 
   get mainTime() {
-    return this.clocks[0].mainTime;
+    return this.players[0].mainTime;
   }
 
   set mainTime(value) {
     for (const side of sides) {
-      this.clocks[side].mainTime = value;
+      this.players[side].mainTime = value;
     }
   }
 
   get extraTime() {
-    return this.clocks[0].extraTime;
+    return this.players[0].extraTime;
   }
 
   set extraTime(value) {
     for (const side of sides) {
-      this.clocks[side].extraTime = value;
+      this.players[side].extraTime = value;
     }
   }
 
   get timingName() {
-    return this.clocks[0].timingName;
+    return this.players[0].timingName;
   }
 
   set timingName(value) {
     for (const side of sides) {
-      this.clocks[side].timingName = value;
+      this.players[side].timingName = value;
     }
   }
 }
@@ -1114,13 +1188,12 @@ function formatHeadKif(game) {
   if (game.startName) {
     headKif += '手合割：' + game.startName + '\n';
   }
-  const sideNames = sides.map((side) => game.sideNames[side] || sideInfos[side].name);
   if (formatSfen(game.startStep.position) !== startNameSfenMap.get(game.startName || defaultStartName)) {
-    headKif += formatBod(game.startStep.position, sideNames);
+    headKif += formatBod(game.startStep.position, game.getSideNames());
   }
   for (const side of sides) {
-    if (game.playerNames[side]) {
-      headKif += sideNames[side] + '：' + game.playerNames[side] + '\n';
+    if (game.players[side].name) {
+      headKif += game.getSideName(side) + '：' + game.players[side].name + '\n';
     }
   }
   return headKif;
@@ -1156,10 +1229,8 @@ export function formatGameKif(game) {
       } else {
         gameKif += formatMoveKif(step.parent.position, step.move, step.parent.move);
       }
-      const side = step.parent.position.sideToMove;
-      const lapTime = step.lapTimes[side];
-      totalTimes[side] += lapTime;
-      gameKif += ' (' + formatTimeMS(lapTime) + '/' + formatTimeHMS(totalTimes[side]) + ')\n';
+      const totalTime = (totalTimes[step.parent.position.sideToMove] += step.lapTime);
+      gameKif += ' (' + formatTimeMS(step.lapTime) + '/' + formatTimeHMS(totalTime) + ')\n';
     }
     const d = depth + 1;
     for (let i = step.children.length; i--; ) {
@@ -1226,11 +1297,9 @@ export function parseGameKif(gameKif) {
         game.startName = value;
         game.startStep.position = parseSfen(startNameSfenMap.get(game.startName) || defaultSfen);
       } else if (name === '先手' || name === '下手') {
-        game.sideNames[0] = name;
-        game.playerNames[0] = value;
+        game.players[0].name = value;
       } else if (name === '後手' || name === '上手') {
-        game.sideNames[1] = name;
-        game.playerNames[1] = value;
+        game.players[1].name = value;
       } else if (name.startsWith('手の持駒', 1)) {
         const side = ch === '後' || ch === '上' ? 1 : 0;
         for (const s of value.split(/\s+/).map((s) => s.trim())) {
@@ -1288,7 +1357,7 @@ export function parseGameKif(gameKif) {
 export function formatGameCsa(game) {
   let gameCsa = 'V2.2\n';
   for (const side of sides) {
-    const playerName = game.playerNames[side];
+    const playerName = game.players[side].name;
     if (playerName) {
       gameCsa += 'N' + sideInfos[side].csa + playerName + '\n';
     }
@@ -1332,8 +1401,8 @@ export function formatGameCsa(game) {
         formatSquareCsa(to) +
         kindInfos[getPieceKind(st.position.getPiece(to))].csa;
     }
-    if (st.lapTimes[st.parent.position.sideToMove]) {
-      gameCsa += ',T' + Math.floor(st.lapTimes[st.parent.position.sideToMove] / 1000);
+    if (st.lapTime) {
+      gameCsa += ',T' + Math.floor(st.lapTime / 1000);
     }
     gameCsa += '\n';
   }
@@ -1366,7 +1435,7 @@ export function parseGameCsa(gameCsa) {
     }
     const ch2 = line[1];
     if (ch === 'N') {
-      game.playerNames[ch2 === '-' ? 1 : 0] = line.slice(2).trim();
+      game.players[ch2 === '-' ? 1 : 0].name = line.slice(2).trim();
       continue;
     }
     if (ch === 'P') {
@@ -1447,7 +1516,7 @@ export function parseGameCsa(gameCsa) {
       continue;
     }
     if (ch === 'T') {
-      targetStep.lapTimes[targetStep.parent.position.sideToMove] = (parseInt(line.slice(1)) || 0) * 1000;
+      targetStep.lapTime = (parseInt(line.slice(1)) || 0) * 1000;
     }
     if (ch === '%') {
       const endCsa = line.slice(ch2 === '+' || ch2 === '-' ? 2 : 1);

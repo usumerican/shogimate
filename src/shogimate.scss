@@ -70,6 +70,19 @@
     place-items: center;
   }
 
+  .LabelLeft {
+    display: flex;
+    gap: $gap;
+    place-items: center;
+  }
+
+  .LabelCenter {
+    display: flex;
+    gap: $gap;
+    place-content: center;
+    place-items: center;
+  }
+
   .Monospace {
     font-family: 'MS Gothic', 'Osaka-Mono', 'Menlo-Regular', monospace;
   }
@@ -78,6 +91,7 @@
     display: grid;
     gap: $gap;
     grid-template-columns: 1fr 2fr 1fr;
+    place-items: stretch;
   }
 
   .ToolBar {
@@ -85,6 +99,7 @@
     gap: $gap;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
+    place-items: stretch;
   }
 
   .ConfirmView {
@@ -147,7 +162,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: 1fr repeat(9, $toolH);
+    grid-template-rows: 1fr repeat(10, $toolH);
 
     .TitleOutput {
       font-size: 1.2rem;
@@ -193,12 +208,6 @@
         display: grid;
         gap: $gap;
         grid-template-columns: 1fr 4rem;
-
-        label {
-          display: flex;
-          gap: $gap;
-          place-items: center left;
-        }
       }
     }
   }
@@ -370,38 +379,18 @@
   }
 
   .MatchSettingsView {
-    background: $shadowColor;
+    background: $themeColor;
     position: absolute;
     width: 100%;
     height: 100%;
+    padding: $gap;
     display: grid;
-    place-items: center;
+    gap: $gap;
+    grid-template-rows: $rowH 1fr $toolH $toolH $toolH $toolH;
+    place-items: stretch;
 
-    .Content {
-      background: $themeColor;
-      width: 95%;
-      height: 95%;
-      padding: $gap;
-      display: grid;
-      gap: $gap;
-      grid-template-rows: $rowH 1fr $toolH $toolH $toolH $toolH;
-      place-items: stretch;
-
-      .ShogiPanel {
-        background: #fff;
-      }
-
-      .PositionBar {
-        display: grid;
-        gap: $gap;
-        grid-template-columns: 1fr 2fr;
-
-        label {
-          display: flex;
-          gap: $gap;
-          place-items: center;
-        }
-      }
+    .ShogiPanel {
+      background: #fff;
     }
   }
 
@@ -444,6 +433,22 @@
 
     .FileInput {
       display: none;
+    }
+  }
+
+  .ResumeView {
+    background: $themeColor;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $rowH 1fr $toolH;
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #fff;
     }
   }
 }
