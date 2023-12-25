@@ -1,11 +1,11 @@
 /* eslint-env browser */
 
-import { on, parseHtml } from './browser.mjs';
+import View from './View.mjs';
+import { on } from './browser.mjs';
 
-export default class ConfirmView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class ConfirmView extends View {
+  constructor() {
+    super(`
       <div class="ConfirmView">
         <div class="Content">
           <div class="MessageOutput Center"></div>
@@ -17,7 +17,7 @@ export default class ConfirmView {
     this.itemList = this.el.querySelector('.ItemList');
   }
 
-  show(message, texts) {
+  onShow(message, texts) {
     this.messageOutput.textContent = message;
     this.itemList.replaceChildren(
       ...texts.map((t, i) => {
@@ -27,17 +27,5 @@ export default class ConfirmView {
         return button;
       })
     );
-    this.app.pushView(this);
-    return new Promise((resolve) => {
-      this.resolve = resolve;
-    });
-  }
-
-  hide(value) {
-    this.app.popView(this);
-    if (this.resolve) {
-      this.resolve(value);
-      this.resolve = null;
-    }
   }
 }

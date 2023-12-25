@@ -1,11 +1,11 @@
 /* eslint-env browser */
 
-import { downloadFile, on, parseHtml, setTextareaValue } from './browser.mjs';
+import View from './View.mjs';
+import { downloadFile, on, setTextareaValue } from './browser.mjs';
 
-export default class CollectionExportView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class CollectionExportView extends View {
+  constructor() {
+    super(`
       <div class="CollectionExportView">
         <div class="Center">書き出し</div>
         <textarea class="TextOutput"></textarea>
@@ -31,12 +31,7 @@ export default class CollectionExportView {
     });
   }
 
-  show(records) {
+  onShow(records) {
     setTextareaValue(this.textOutput, records.join('\n') + '\n');
-    this.app.pushView(this);
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 }

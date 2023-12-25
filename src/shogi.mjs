@@ -441,20 +441,23 @@ export class Position {
   }
 
   doMove(move) {
-    const from = getMoveFrom(move);
-    const to = getMoveTo(move);
-    const capturedPiece = this.getPiece(to);
-    if (isMoveDropped(move)) {
-      this.setPiece(to, makePiece(from, this.sideToMove));
-      this.addHandCount(this.sideToMove, from, -1);
-    } else {
-      if (capturedPiece) {
-        const base = getPieceBase(capturedPiece);
-        this.addHandCount(this.sideToMove, base, 1);
+    let capturedPiece = 0;
+    if (move) {
+      const from = getMoveFrom(move);
+      const to = getMoveTo(move);
+      if (isMoveDropped(move)) {
+        this.setPiece(to, makePiece(from, this.sideToMove));
+        this.addHandCount(this.sideToMove, from, -1);
+      } else {
+        capturedPiece = this.getPiece(to);
+        if (capturedPiece) {
+          const base = getPieceBase(capturedPiece);
+          this.addHandCount(this.sideToMove, base, 1);
+        }
+        const piece = this.getPiece(from);
+        this.setPiece(to, isMovePromoted(move) ? promotePiece(piece) : piece);
+        this.setPiece(from, 0);
       }
-      const piece = this.getPiece(from);
-      this.setPiece(to, isMovePromoted(move) ? promotePiece(piece) : piece);
-      this.setPiece(from, 0);
     }
     this.sideToMove ^= 1;
     this.number++;

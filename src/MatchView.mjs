@@ -4,7 +4,8 @@ import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ResumeView from './ResumeView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
-import { on, parseHtml, setTextareaValue } from './browser.mjs';
+import View from './View.mjs';
+import { on, setTextareaValue } from './browser.mjs';
 import {
   formatGameUsiFromLastStep,
   formatPvMoveUsis,
@@ -18,10 +19,9 @@ import {
   usiEndNameMap,
 } from './shogi.mjs';
 
-export default class MatchView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class MatchView extends View {
+  constructor() {
+    super(`
       <div class="MatchView">
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
@@ -39,7 +39,7 @@ export default class MatchView {
       </div>
     `);
     this.titleOutput = this.el.querySelector('.TitleOutput');
-    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
     this.hintOutput = this.el.querySelector('.HintOutput');
     this.adjournCheckbox = this.el.querySelector('.AdjournCheckbox');
 
@@ -47,8 +47,8 @@ export default class MatchView {
       this.hide();
     });
 
-    on(this.el.querySelector('.MenuButton'), 'click', () => {
-      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
+    on(this.el.querySelector('.MenuButton'), 'click', async () => {
+      await new MenuView().show(this, 'メニュー', this.shogiPanel.createMenuItems());
     });
 
     on(this.el.querySelector('.UndoButton'), 'click', () => {
@@ -67,8 +67,8 @@ export default class MatchView {
     });
 
     on(this.el.querySelector('.HintButton'), 'click', async () => {
-      const progressView = new ProgressView(this.app);
-      progressView.show('考え中', '#fff6');
+      const progressView = new ProgressView();
+      progressView.show(this, '考え中', '#fff6');
       try {
         const targetStep = this.step;
         targetStep.hint = await this.analyze(targetStep, 1000);
@@ -88,15 +88,16 @@ export default class MatchView {
     on(this.el.querySelector('.ResignButton'), 'click', async () => {
       if (!this.thinking) {
         const targetStep = this.step;
-        if (await new ConfirmView(this.app).show('投了しますか?', ['いいえ', 'はい'])) {
+        if (await new ConfirmView().show(this, '投了しますか?', ['いいえ', 'はい'])) {
           this.changeStep(this.appendEnd(targetStep, '投了'));
-          this.doBrowse();
+          await this.doBrowse();
         }
       }
     });
   }
 
-  show(title, game, lastStep = game.startStep) {
+  onShow(title, game, lastStep = game.startStep) {
+    this.shogiPanel.app = this.app;
     this.title = this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
     if (lastStep === this.game.startStep) {
@@ -107,23 +108,21 @@ export default class MatchView {
       }
     }
     this.changeStep(lastStep);
-    this.app.pushView(this);
     this.app.initAudio();
     this.think();
   }
 
-  hide() {
+  onHide() {
     for (const side of sides) {
       this.shogiPanel.stopClock(side);
     }
-    this.app.popView(this);
   }
 
   onPointerBefore() {
     return !this.thinking && !this.isAutomatic() && !this.step.endName;
   }
 
-  onMove(move) {
+  async onMove(move) {
     const nextStep = this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove));
     this.app.playPieceSound();
     this.app.speakMoveText(formatStep(nextStep));
@@ -131,10 +130,10 @@ export default class MatchView {
     if (this.adjournCheckbox.checked) {
       this.app.settings.adjournedGame = this.game.toObject();
       this.app.saveSettings();
+      await new ResumeView().show(this);
       this.hide();
-      new ResumeView(this.app).show();
     } else {
-      this.think();
+      await this.think();
     }
   }
 
@@ -204,19 +203,20 @@ export default class MatchView {
 
   async endGame(step, endName) {
     this.changeStep(this.appendEnd(step, endName));
-    await new ConfirmView(this.app).show(
+    await new ConfirmView().show(
+      this,
       `${sideInfos[step.position.sideToMove].char}${this.game.getSideName(step.position.sideToMove)}の${endName}です。`,
       ['OK']
     );
-    this.doBrowse();
+    await this.doBrowse();
   }
 
   appendEnd(step, endName) {
     return step.appendEnd(endName, this.shogiPanel.stopClock(step.position.sideToMove));
   }
 
-  doBrowse() {
+  async doBrowse() {
+    await new BrowseView().show(this, this.title, this.game, this.step, true);
     this.hide();
-    new BrowseView(this.app).show(this.title, this.game, this.step, true);
   }
 }

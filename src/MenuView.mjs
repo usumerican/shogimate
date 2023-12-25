@@ -1,11 +1,11 @@
 /* eslint-env browser */
 
-import { on, parseHtml } from './browser.mjs';
+import View from './View.mjs';
+import { on } from './browser.mjs';
 
-export default class MenuView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class MenuView extends View {
+  constructor() {
+    super(`
       <div class="MenuView">
         <div class="Content">
           <div class="MessageOutput Center"></div>
@@ -21,7 +21,7 @@ export default class MenuView {
     on(this.el, 'click', () => this.hide());
   }
 
-  show(message, items) {
+  onShow(message, items) {
     this.messageOutput.textContent = message;
     this.itemList.replaceChildren(
       ...items.map((item) => {
@@ -35,10 +35,5 @@ export default class MenuView {
         return button;
       })
     );
-    this.app.pushView(this);
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 }

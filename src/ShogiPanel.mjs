@@ -32,8 +32,7 @@ import {
 } from './shogi.mjs';
 
 export default class ShogiPanel {
-  constructor(app, el, handler) {
-    this.app = app;
+  constructor(el, handler) {
     this.el = el;
     this.handler = handler;
     this.squareW = 100;
@@ -136,7 +135,7 @@ export default class ShogiPanel {
       } else {
         let promoted = this.nextToMap.get(sq) - 1;
         if (promoted === 2) {
-          promoted = await new ConfirmView(this.app).show('成りますか?', ['成らない', '成る']);
+          promoted = await new ConfirmView().show(this.app, '成りますか?', ['成らない', '成る']);
         }
         this.handler?.onMove(makeMove(nextFrom, sq, promoted));
       }
@@ -473,14 +472,14 @@ export default class ShogiPanel {
       },
       {
         title: '棋譜・局面の書き出し',
-        callback: () => {
-          new ExportView(this.app).show(this.game, this.step);
+        callback: async () => {
+          await new ExportView().show(this.app, this.game, this.step);
         },
       },
       {
         title: 'アプリ設定',
         callback: async () => {
-          if (await new SettingsView(this.app).show()) {
+          if (await new SettingsView().show(this.app)) {
             this.request();
           }
         },

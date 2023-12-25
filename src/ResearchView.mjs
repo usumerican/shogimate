@@ -4,6 +4,7 @@ import BrowseView from './BrowseView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
+import View from './View.mjs';
 import { on, parseHtml, setSelectValue } from './browser.mjs';
 import {
   Step,
@@ -17,10 +18,9 @@ import {
   formatStep,
 } from './shogi.mjs';
 
-export default class ResearchView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class ResearchView extends View {
+  constructor() {
+    super(`
       <div class="ResearchView">
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
@@ -51,7 +51,7 @@ export default class ResearchView {
         </table>
       </div>
     `);
-    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
     this.pvInfoTable = this.el.querySelector('.PvInfoTable');
     this.pvInfoTbody = this.el.querySelector('.PvInfoTbody');
     this.timeSelect = this.el.querySelector('.TimeSelect');
@@ -61,8 +61,8 @@ export default class ResearchView {
       this.hide();
     });
 
-    on(this.el.querySelector('.MenuButton'), 'click', () => {
-      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
+    on(this.el.querySelector('.MenuButton'), 'click', async () => {
+      await new MenuView().show(this, 'メニュー', this.shogiPanel.createMenuItems());
     });
 
     on(this.el.querySelector('.StepPrevButton'), 'click', () => {
@@ -80,18 +80,14 @@ export default class ResearchView {
     });
   }
 
-  async show(game, step) {
+  onShow(game, step) {
+    this.shogiPanel.app = this.app;
     this.game = this.shogiPanel.game = game;
     setSelectValue(this.timeSelect, this.app.settings.research?.time);
     setSelectValue(this.mpvSelect, this.app.settings.research?.mpv);
     this.changeStep(new Step(step.endName && step.parent ? step.parent : step));
-    this.app.pushView(this);
     this.app.initAudio();
-    await this.doResearch();
-  }
-
-  hide() {
-    this.app.popView(this);
+    this.doResearch();
   }
 
   onPointerBefore() {
@@ -107,8 +103,8 @@ export default class ResearchView {
   }
 
   async doResearch(time = 1000, mpv = 1) {
-    const progressView = new ProgressView(this.app);
-    progressView.show('考え中', '#fff6');
+    const progressView = new ProgressView();
+    progressView.show(this, '考え中', '#fff6');
     try {
       const targetStep = this.step;
       targetStep.gameUsi = formatGameUsiFromLastStep(targetStep);
@@ -136,13 +132,13 @@ export default class ResearchView {
         row.scoreOutput = row.querySelector('.ScoreOutput');
         row.depthOutput = row.querySelector('.DepthOutput');
         row.pvOutput = row.querySelector('.PvOutput');
-        on(row, 'click', () => {
+        on(row, 'click', async () => {
           const game = new Game(this.game);
           let st = (game.startStep = new Step({ position: targetStep.position }));
           for (const moveUsi of row.moveUsis) {
             st = st.appendMoveUsi(moveUsi);
           }
-          new BrowseView(this.app).show('読み筋', game);
+          await new BrowseView().show(this, '読み筋', game);
         });
         rows.push(row);
       }

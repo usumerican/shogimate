@@ -4,13 +4,13 @@ import ConfirmView from './ConfirmView.mjs';
 import ImportView from './ImportView.mjs';
 import MatchView from './MatchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
-import { on, parseHtml, setSelectValue } from './browser.mjs';
+import View from './View.mjs';
+import { on, setSelectValue } from './browser.mjs';
 import { formatSfen, parseGameUsi, sideInfos, sides, startInfos, startNameSfenMap, timingInfos } from './shogi.mjs';
 
-export default class MatchSettingsView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class MatchSettingsView extends View {
+  constructor() {
+    super(`
       <div class="MatchSettingsView">
         <div class="Center">対局設定</div>
         <canvas class="ShogiPanel"></canvas>
@@ -35,12 +35,12 @@ export default class MatchSettingsView {
           <select class="ExtraTimeSelect"></select>
         </div>
         <div class="ToolBar">
-          <button class="CloseButton">キャンセル</button>
+          <button class="CloseButton">閉じる</button>
           <button class="StartButton">開始</button>
         </div>
       </div>
     `);
-    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'));
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'));
     this.startSelect = this.el.querySelector('.StartSelect');
     this.startSelect.replaceChildren(...startInfos.map((info) => new Option(info.name)));
     this.automationSelect = this.el.querySelector('.AutomationSelect');
@@ -80,7 +80,7 @@ export default class MatchSettingsView {
     });
 
     on(this.el.querySelector('.ImportButton'), 'click', async () => {
-      const game = await new ImportView(this.app).show();
+      const game = await new ImportView().show(this);
       if (game) {
         this.positionSpecifiedCheckbox.checked = true;
         this.positionSfenInput.value = formatSfen(game.startStep.position);
@@ -117,7 +117,7 @@ export default class MatchSettingsView {
       if (automation === 3) {
         const side = Math.floor(Math.random() * 2);
         if (
-          !(await new ConfirmView(this.app).show(`あなたは${this.getAutomationOption(side).text}です。`, [
+          !(await new ConfirmView().show(this, `あなたは${this.getAutomationOption(side).text}です。`, [
             'キャンセル',
             'OK',
           ]))
@@ -145,12 +145,13 @@ export default class MatchSettingsView {
         };
         this.app.saveSettings();
       }
+      await new MatchView().show(this, '対局', this.game);
       this.hide();
-      new MatchView(this.app).show('対局', this.game);
     });
   }
 
-  show({ startName, automation, level, positionSpecified, positionSfen } = {}, temporary) {
+  onShow({ startName, automation, level, positionSpecified, positionSfen } = {}, temporary) {
+    this.shogiPanel.app = this.app;
     setSelectValue(this.startSelect, startName);
     setSelectValue(this.automationSelect, automation);
     setSelectValue(this.levelSelect, level);
@@ -161,11 +162,6 @@ export default class MatchSettingsView {
     setSelectValue(this.extraTimeSelect, this.app.settings.match?.extraTime);
     this.temporary = temporary;
     this.update();
-    this.app.pushView(this);
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 
   update() {
