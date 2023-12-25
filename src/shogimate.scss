@@ -162,11 +162,22 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: 1fr repeat(10, $toolH);
+    grid-template-rows: 1fr repeat(6, $toolH * 1.5);
 
-    .TitleOutput {
+    .AppTitleOutput {
       font-size: 1.2rem;
     }
+  }
+
+  .QuestionSettingsView {
+    background: $themeColor;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $rowH repeat(6, $toolH) 1fr $toolH;
   }
 
   .QuestionView {
@@ -449,6 +460,22 @@
 
     .ShogiPanel {
       background: #fff;
+    }
+  }
+
+  .CapturingView {
+    background: $themeColor;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $toolH 1fr $toolH $toolH;
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #ffd;
     }
   }
 }

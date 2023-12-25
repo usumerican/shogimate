@@ -1,10 +1,12 @@
-import { on, parseHtml, setTextareaValue } from './browser.mjs';
+/* eslint-env browser */
+
+import View from './View.mjs';
+import { on, setTextareaValue } from './browser.mjs';
 import { parseGameCsa, parseGameKif, parseGameUsi } from './shogi.mjs';
 
-export default class ImportView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class ImportView extends View {
+  constructor() {
+    super(`
       <div class="ImportView">
         <div class="Center">読み込み</div>
         <textarea class="TextInput" placeholder="KIF/KI2/CSA/USI/BOD/SFEN"></textarea>
@@ -18,9 +20,25 @@ export default class ImportView {
       </div>
     `);
     this.textInput = this.el.querySelector('.TextInput');
+    this.fileInput = this.el.querySelector('.FileInput');
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
       this.hide();
+    });
+
+    on(this.el.querySelector('.FileButton'), 'click', () => {
+      this.fileInput.click();
+    });
+
+    on(this.fileInput, 'change', () => {
+      const file = this.fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setTextareaValue(this.textInput, reader.result);
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
     });
 
     on(this.el.querySelector('.PasteButton'), 'click', async () => {
@@ -33,20 +51,5 @@ export default class ImportView {
         this.hide(parseGameUsi(gameText) || parseGameCsa(gameText) || parseGameKif(gameText));
       }
     });
-  }
-
-  show() {
-    this.app.pushView(this);
-    return new Promise((resolve) => {
-      this.resolve = resolve;
-    });
-  }
-
-  hide(value) {
-    this.app.popView(this);
-    if (this.resolve) {
-      this.resolve(value);
-      this.resolve = null;
-    }
   }
 }

@@ -5,7 +5,8 @@ import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
-import { on, onLongPress, parseHtml, shuffle } from './browser.mjs';
+import View from './View.mjs';
+import { on, onLongPress, shuffle } from './browser.mjs';
 import {
   Step,
   formatStep,
@@ -18,10 +19,9 @@ import {
   sides,
 } from './shogi.mjs';
 
-export default class QuestionView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class QuestionView extends View {
+  constructor() {
+    super(`
       <div class="QuestionView">
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
@@ -48,7 +48,7 @@ export default class QuestionView {
     this.recordPrevButton = this.el.querySelector('.RecordPrevButton');
     this.recordNextButton = this.el.querySelector('.RecordNextButton');
     this.collectButton = this.el.querySelector('.CollectButton');
-    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'), this);
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'), this);
     this.resetButton = this.el.querySelector('.ResetButton');
     this.undoButton = this.el.querySelector('.UndoButton');
     this.answerButton = this.el.querySelector('.AnswerButton');
@@ -57,8 +57,8 @@ export default class QuestionView {
       this.hide(this.changed);
     });
 
-    on(this.el.querySelector('.MenuButton'), 'click', () => {
-      new MenuView(this.app).show('メニュー', this.shogiPanel.createMenuItems());
+    on(this.el.querySelector('.MenuButton'), 'click', async () => {
+      await new MenuView().show(this, 'メニュー', this.shogiPanel.createMenuItems());
     });
 
     on(this.recordSelect, 'change', () => {
@@ -94,18 +94,19 @@ export default class QuestionView {
       this.doUndo();
     });
 
-    on(this.answerButton, 'click', () => {
+    on(this.answerButton, 'click', async () => {
       if (this.limit) {
-        new BrowseView(this.app).show('解答例', this.answerGame);
+        await new BrowseView().show(this, '解答例', this.answerGame);
       }
     });
 
-    on(this.el.querySelector('.ResearchButton'), 'click', () => {
-      new ResearchView(this.app).show(this.game, this.step);
+    on(this.el.querySelector('.ResearchButton'), 'click', async () => {
+      await new ResearchView().show(this, this.game, this.step);
     });
   }
 
-  show(records, startRecordOrder, title, bookName, volumeName) {
+  onShow(records, startRecordOrder, title, bookName, volumeName) {
+    this.shogiPanel.app = this.app;
     this.title = title;
     this.bookName = bookName;
     this.volumeName = volumeName;
@@ -135,26 +136,17 @@ export default class QuestionView {
       this.changed = true;
     }
     this.recordSelect.replaceChildren(...options);
-    this.app.pushView(this);
     this.app.initAudio();
     this.updateRecord();
-    return new Promise((resolve) => {
-      this.resolve = resolve;
-    });
   }
 
   formatRecordOption(recordIndex, marked) {
     return `第${recordIndex + 1}問${marked ? '❤️' : ''}`;
   }
 
-  hide(value) {
+  onHide() {
     for (const side of sides) {
       this.shogiPanel.stopClock(side);
-    }
-    this.app.popView(this);
-    if (this.resolve) {
-      this.resolve(value);
-      this.resolve = null;
     }
   }
 
@@ -261,13 +253,13 @@ export default class QuestionView {
       this.shogiPanel.startClock(this.step.position.sideToMove);
       const manual = this.step.position.sideToMove === this.startSide;
       if (manual && this.isExceeded()) {
-        this.endGame('不詰');
+        await this.endGame('不詰');
         return;
       }
       this.step.gameUsi = formatGameUsiFromLastStep(this.step);
       this.step.fromToMap = await this.app.engine.getFromToMap(this.step.gameUsi, manual && !this.rate);
       if (!this.step.fromToMap.size) {
-        this.endGame('詰み', !manual);
+        await this.endGame('詰み', !manual);
         return;
       }
       if (manual) {
@@ -284,16 +276,16 @@ export default class QuestionView {
       if (move) {
         this.onMove(move);
       } else {
-        this.endGame(usiEndNameMap.get(moveUsi) || moveUsi);
+        await this.endGame(usiEndNameMap.get(moveUsi) || moveUsi);
       }
     } finally {
       this.thinking = false;
     }
   }
 
-  endGame(endName, success) {
+  async endGame(endName, success) {
     this.changeStep(this.appendEnd(endName));
-    new ProgressView(this.app).show(...(success ? ['成功', '#cfc6'] : ['失敗', '#fcc6']), 1000);
+    await new ProgressView().show(this, ...(success ? ['成功', '#cfc6'] : ['失敗', '#fcc6']), 1000);
   }
 
   appendEnd(endName) {

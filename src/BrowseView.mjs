@@ -4,13 +4,13 @@ import MatchSettingsView from './MatchSettingsView.mjs';
 import MenuView from './MenuView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
+import View from './View.mjs';
 import { on, onLongPress, parseHtml } from './browser.mjs';
 import { Game, Step, formatPvMoveUsis, formatPvScoreValue, formatSfen, formatStep, sideInfos } from './shogi.mjs';
 
-export default class BrowseView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class BrowseView extends View {
+  constructor() {
+    super(`
       <div class="BrowseView">
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
@@ -31,7 +31,7 @@ export default class BrowseView {
       </div>
     `);
     this.titleOutput = this.el.querySelector('.TitleOutput');
-    this.shogiPanel = new ShogiPanel(this.app, this.el.querySelector('.ShogiPanel'));
+    this.shogiPanel = new ShogiPanel(this.el.querySelector('.ShogiPanel'));
     this.stepTbody = this.el.querySelector('.StepTbody');
     this.parentButton = this.el.querySelector('.ParentButton');
     this.firstButton = this.el.querySelector('.FirstButton');
@@ -44,19 +44,20 @@ export default class BrowseView {
     });
 
     on(this.el.querySelector('.MenuButton'), 'click', async () => {
-      new MenuView(this.app).show('メニュー', [
+      await new MenuView().show(this, 'メニュー', [
         ...this.shogiPanel.createMenuItems(),
         {
           title: '局面の検討',
-          callback: () => {
-            new ResearchView(this.app).show(this.game, this.getCurrStep());
+          callback: async () => {
+            await new ResearchView().show(this, this.game, this.getCurrStep());
           },
         },
         {
           title: '指定局面として対局',
-          callback: () => {
+          callback: async () => {
             const currStep = this.getCurrStep();
-            new MatchSettingsView(this.app).show(
+            await new MatchSettingsView().show(
+              this,
               {
                 startName: this.game.startName,
                 automation: currStep.position.sideToMove ? 1 : 2,
@@ -92,7 +93,8 @@ export default class BrowseView {
     });
   }
 
-  show(title, game, step, analyzed) {
+  onShow(title, game, step, analyzed) {
+    this.shogiPanel.app = this.app;
     this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
     const startNumber = this.game.startStep.position.number;
@@ -130,13 +132,13 @@ export default class BrowseView {
           }
           scoreCell.textContent = formatPvScoreValue(rowStep.analysis.scoreValue);
           pvCell.textContent = formatPvMoveUsis(rowStep, rowStep.analysis.pv).join(' ');
-          on(pvCell, 'click', () => {
+          on(pvCell, 'click', async () => {
             const pvGame = new Game(this.game);
             let pvStep = (pvGame.startStep = new Step({ position: rowStep.position }));
             for (const moveUsi of rowStep.analysis.pv) {
               pvStep = pvStep.appendMoveUsi(moveUsi);
             }
-            new BrowseView(this.app).show('読み筋', pvGame);
+            await new BrowseView().show(this, '読み筋', pvGame);
           });
         }
       }
@@ -144,7 +146,6 @@ export default class BrowseView {
     });
     this.stepTbody.replaceChildren(...rows);
     this.jump(this.steps.indexOf(step));
-    this.app.pushView(this);
   }
 
   walkSteps(step, callback) {
@@ -154,10 +155,6 @@ export default class BrowseView {
         this.walkSteps(child, callback);
       }
     }
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 
   jump(stepIndex) {

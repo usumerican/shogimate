@@ -5,11 +5,11 @@ import CollectionExportView from './CollectionExportView.mjs';
 import CollectionImportView from './CollectionImportView.mjs';
 import QuestionView from './QuestionView.mjs';
 import { on, parseHtml } from './browser.mjs';
+import View from './View.mjs';
 
-export default class CollectionView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class CollectionView extends View {
+  constructor() {
+    super(`
       <div class="CollectionView">
         <div class="Center">コレクション</div>
         <div class="ToolBar">
@@ -58,7 +58,7 @@ export default class CollectionView {
       item.deleteButton = item.querySelector('.DeleteButton');
       on(item.deleteButton, 'click', async () => {
         if (item.records.length) {
-          if (await new ConfirmView(this.app).show('削除しますか?', ['いいえ', 'はい'])) {
+          if (await new ConfirmView().show(this, '削除しますか?', ['いいえ', 'はい'])) {
             for (const record of item.records) {
               this.app.collection.delete(record);
             }
@@ -85,19 +85,19 @@ export default class CollectionView {
     });
 
     on(this.el.querySelector('.ImportButton'), 'click', async () => {
-      if (await new CollectionImportView(this.app).show()) {
+      if (await new CollectionImportView().show(this)) {
         this.updateCounts();
       }
     });
 
-    on(this.exportButton, 'click', () => {
+    on(this.exportButton, 'click', async () => {
       const records = [];
       for (const item of this.limitItems) {
         if (item.checkbox.checked) {
           records.push(...item.records);
         }
       }
-      new CollectionExportView(this.app).show(records);
+      await new CollectionExportView().show(this, records);
     });
 
     on(this.startButton, 'click', () => {
@@ -109,17 +109,12 @@ export default class CollectionView {
     });
   }
 
-  show() {
+  onShow() {
     const limitSet = new Set(this.app.settings.collection?.limits);
     for (const item of this.limitItems) {
       item.checkbox.checked = limitSet.has(item.limit);
     }
     this.updateCounts();
-    this.app.pushView(this);
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 
   async start(startRecordOrder) {
@@ -134,7 +129,7 @@ export default class CollectionView {
     if (records.length) {
       this.app.settings.collection = { limits };
       this.app.saveSettings();
-      await new QuestionView(this.app).show(records, startRecordOrder, 'コレクション');
+      await new QuestionView().show(this, records, startRecordOrder, 'コレクション');
       this.updateCounts();
     }
   }

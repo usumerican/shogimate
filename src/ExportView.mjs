@@ -1,12 +1,12 @@
 /* eslint-env browser */
 
-import { downloadFile, on, parseHtml, setSelectValue, setTextareaValue } from './browser.mjs';
+import View from './View.mjs';
+import { downloadFile, on, setSelectValue, setTextareaValue } from './browser.mjs';
 import { formatBod, formatGameCsa, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';
 
-export default class ExportView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class ExportView extends View {
+  constructor() {
+    super(`
       <div class="ExportView">
         <div class="Center">書き出し</div>
         <textarea class="TextOutput Monospace"></textarea>
@@ -53,16 +53,11 @@ export default class ExportView {
     });
   }
 
-  show(game, step) {
+  onShow(game, step) {
     this.game = game;
     this.step = step;
     setSelectValue(this.formatSelect, this.app.settings.export?.formatName);
     this.update();
-    this.app.pushView(this);
-  }
-
-  hide() {
-    this.app.popView(this);
   }
 
   update() {

@@ -1,13 +1,13 @@
 /* eslint-env browser */
 
 import ConfirmView from './ConfirmView.mjs';
-import { on, parseHtml, setTextareaValue } from './browser.mjs';
+import View from './View.mjs';
+import { on, setTextareaValue } from './browser.mjs';
 import { formatGameUsi, parseGameUsi } from './shogi.mjs';
 
-export default class CollectionImportView {
-  constructor(app) {
-    this.app = app;
-    this.el = parseHtml(`
+export default class CollectionImportView extends View {
+  constructor() {
+    super(`
       <div class="CollectionImportView">
         <div class="Center">読み込み</div>
         <textarea class="TextInput" placeholder="SFEN moves MOVE1 MOVE2..."></textarea>
@@ -50,7 +50,7 @@ export default class CollectionImportView {
           if (game) {
             records.push(this.formatRecord(game));
           } else {
-            await new ConfirmView(this.app).show(`書式エラー: ${i + 1}行目`, ['OK']);
+            await new ConfirmView().show(this, `書式エラー: ${i + 1}行目`, ['OK']);
             return;
           }
         }
@@ -66,7 +66,8 @@ export default class CollectionImportView {
           }
         }
         this.app.saveCollection();
-        await new ConfirmView(this.app).show(
+        await new ConfirmView().show(
+          this,
           `${records.length - skipCount}件読み込みました。` + (skipCount ? `(登録済: ${skipCount}件)` : ''),
           ['OK']
         );
@@ -75,21 +76,9 @@ export default class CollectionImportView {
     });
   }
 
-  show() {
+  onShow() {
     this.textInput.value = '';
     this.fileInput.value = '';
-    this.app.pushView(this);
-    return new Promise((resolve) => {
-      this.resolve = resolve;
-    });
-  }
-
-  hide(value) {
-    this.app.popView(this);
-    if (this.resolve) {
-      this.resolve(value);
-      this.resolve = null;
-    }
   }
 
   formatRecord(game) {

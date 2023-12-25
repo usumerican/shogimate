@@ -15,8 +15,8 @@ export default class App {
   }
 
   start() {
-    this.root = document.getElementById(this.id) || document.body;
-    this.root.classList.add(App.NAME);
+    this.el = document.getElementById(this.id) || document.body;
+    this.el.classList.add(App.NAME);
     this.timeoutMap = new Map();
     this.soundDataMap = new Map();
     this.recordsCache = new Map();
@@ -150,36 +150,7 @@ export default class App {
       return bookMap;
     }, new Map());
     this.viewStack = [];
-    new HomeView(this).show();
-  }
-
-  pushView(view) {
-    this.viewStack.unshift(view);
-    this.root.appendChild(view.el);
-    this.focusView(view);
-  }
-
-  popView(view) {
-    if (this.viewStack.length > 1) {
-      const currView = this.viewStack[0];
-      if (!view) {
-        view = currView;
-      }
-      const i = this.viewStack.indexOf(view);
-      if (i >= 0) {
-        for (const v of this.viewStack.splice(0, i + 1)) {
-          this.root.removeChild(v.el);
-        }
-      }
-      if (this.viewStack[0] !== currView) {
-        this.focusView(this.viewStack[0]);
-      }
-    }
-  }
-
-  focusView(view) {
-    view.onFocus?.();
-    view.el.querySelector('button:not(:disabled)')?.focus();
+    new HomeView().show(this);
   }
 
   loadItem(key) {
@@ -260,7 +231,7 @@ export default class App {
 
   async writeToClipboard(text) {
     await navigator.clipboard.writeText(text);
-    await new ConfirmView(this).show('クリップボードにコピーしました。', ['OK']);
+    await new ConfirmView().show(this, 'クリップボードにコピーしました。', ['OK']);
   }
 
   async readFromClipboard() {
