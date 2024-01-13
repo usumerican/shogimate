@@ -15,7 +15,7 @@ import {
   Game,
   parsePvScore,
   formatPvScoreValue,
-  formatStep,
+  formatMoveText,
 } from './shogi.mjs';
 
 export default class ResearchView extends View {
@@ -95,10 +95,9 @@ export default class ResearchView extends View {
   }
 
   async onMove(move) {
-    const step = this.step.appendMove(move);
     this.app.playPieceSound();
-    this.app.speakMoveText(formatStep(step));
-    this.changeStep(step);
+    this.app.speakMoveText(formatMoveText(this.step.position, move, this.step.move));
+    this.changeStep(this.step.appendMove(move));
     await this.doResearch();
   }
 

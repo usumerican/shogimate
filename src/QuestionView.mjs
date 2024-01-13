@@ -9,7 +9,6 @@ import View from './View.mjs';
 import { on, onLongPress, shuffle } from './browser.mjs';
 import {
   Step,
-  formatStep,
   parseMoveUsi,
   usiEndNameMap,
   parseGameUsi,
@@ -17,6 +16,7 @@ import {
   Game,
   Position,
   sides,
+  formatMoveText,
 } from './shogi.mjs';
 
 export default class QuestionView extends View {
@@ -240,10 +240,9 @@ export default class QuestionView extends View {
   }
 
   async onMove(move) {
-    const nextStep = this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove));
     this.app.playPieceSound();
-    this.app.speakMoveText(formatStep(nextStep));
-    this.changeStep(nextStep);
+    this.app.speakMoveText(formatMoveText(this.step.position, move, this.step.move));
+    this.changeStep(this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove)));
     this.think();
   }
 

@@ -82,10 +82,14 @@ export default class ShogiEngine {
     }
   }
 
-  async getFromToMap(gameUsi, checks) {
+  async getMoves(gameUsi, checks) {
     await this.postCommand(gameUsi);
+    return (await this.callCommand(checks ? 'checks' : 'moves', () => true)).trim();
+  }
+
+  async getFromToMap(gameUsi, checks) {
     const fromToMap = new Map();
-    const line = (await this.callCommand(checks ? 'checks' : 'moves', () => true)).trim();
+    const line = await this.getMoves(gameUsi, checks);
     if (line) {
       for (const moveUsi of line.split(/\s+/)) {
         const move = parseMoveUsi(moveUsi);

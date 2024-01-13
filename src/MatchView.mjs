@@ -8,9 +8,9 @@ import View from './View.mjs';
 import { on, setTextareaValue } from './browser.mjs';
 import {
   formatGameUsiFromLastStep,
+  formatMoveText,
   formatPvMoveUsis,
   formatPvScoreValue,
-  formatStep,
   parseMoveUsi,
   parsePvInfoUsi,
   parsePvScore,
@@ -123,10 +123,11 @@ export default class MatchView extends View {
   }
 
   async onMove(move) {
-    const nextStep = this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove));
-    this.app.playPieceSound();
-    this.app.speakMoveText(formatStep(nextStep));
-    this.changeStep(nextStep);
+    if (!this.adjournCheckbox.checked) {
+      this.app.playPieceSound();
+      this.app.speakMoveText(formatMoveText(this.step.position, move, this.step.move));
+    }
+    this.changeStep(this.step.appendMove(move, this.shogiPanel.stopClock(this.step.position.sideToMove)));
     if (this.adjournCheckbox.checked) {
       this.app.settings.adjournedGame = this.game.toObject();
       this.app.saveSettings();
