@@ -4,7 +4,16 @@ import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';
 import { on, onLongPress } from './browser.mjs';
-import { formatSfen, getMoveTo, getPieceSide, makeMove, makePositionCommand, parseGameUsi, squareN } from './shogi.mjs';
+import {
+  formatMoveText,
+  formatSfen,
+  getMoveTo,
+  getPieceSide,
+  makeMove,
+  makePositionCommand,
+  parseGameUsi,
+  squareN,
+} from './shogi.mjs';
 
 export default class CapturingView extends View {
   constructor() {
@@ -83,6 +92,8 @@ export default class CapturingView extends View {
   }
 
   async onMove(move) {
+    this.app.playPieceSound();
+    this.app.speakMoveText(formatMoveText(this.step.position, move, this.step.move));
     const step = this.step.appendMove(move).appendMove(0);
     this.changeStep(step);
     await this.turn();

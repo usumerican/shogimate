@@ -30,6 +30,16 @@ export default class ExportView extends View {
         handler: () => formatBod(this.step.position, this.game.getSideNames(), this.step.position.number),
       },
       { name: 'position.sfen', title: '局面 (SFEN)', handler: () => formatSfen(this.step.position) },
+      {
+        name: 'legals.usi',
+        title: '合法手 (USI)',
+        handler: () => this.formatMoves(),
+      },
+      {
+        name: 'checks.usi',
+        title: '王手 (USI)',
+        handler: () => this.formatMoves(true),
+      },
     ];
     this.formatSelect = this.el.querySelector('.FormatSelect');
     this.formatSelect.replaceChildren(...this.formatInfos.map((info) => new Option(info.title, info.name)));
@@ -60,7 +70,11 @@ export default class ExportView extends View {
     this.update();
   }
 
-  update() {
-    setTextareaValue(this.textOutput, this.formatInfos[this.formatSelect.selectedIndex].handler());
+  async update() {
+    setTextareaValue(this.textOutput, await this.formatInfos[this.formatSelect.selectedIndex].handler());
+  }
+
+  formatMoves(checks) {
+    return this.app.engine.getMoves(formatGameUsi(this.game), checks);
   }
 }
