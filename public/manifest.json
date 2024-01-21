@@ -1,6 +1,6 @@
 {
-  "name": "詰将棋エイト",
-  "short_name": "詰将棋エイト",
+  "name": "将棋メイト",
+  "short_name": "将棋メイト",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
