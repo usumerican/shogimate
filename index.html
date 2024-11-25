@@ -2,7 +2,7 @@
 <html lang="ja">
   <head prefix="og: http://ogp.me/ns# website: http://ogp.me/ns/website#">
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
     <meta name="description" content="%VITE_APP_DESCRIPTION%" />
     <meta name="theme-color" content="#fd0" />
     <meta property="og:url" content="%VITE_APP_URL%" />
@@ -20,23 +20,36 @@
     <link rel="stylesheet" href="src/shogimate.scss" />
     <style>
       html {
+        width: 100%;
         height: 100%;
         overflow: hidden;
         touch-action: manipulation;
       }
       body {
+        background: #fd0;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+          env(safe-area-inset-left);
+        display: grid;
+        place-items: center;
+      }
+      #app {
+        width: 100%;
         max-width: 100vh;
         height: 100%;
-        margin: 0 auto;
-        background: #999;
       }
     </style>
     <script src="lib/sse42/yaneuraou.js" defer></script>
     <script src="lib/nosimd/yaneuraou.js" defer></script>
     <script type="module" src="src/shogimate.mjs"></script>
     <script>
-      addEventListener('DOMContentLoaded', () => shogimate());
+      addEventListener('DOMContentLoaded', () => shogimate('app'));
     </script>
   </head>
-  <body></body>
+  <body>
+    <div id="app"></div>
+  </body>
 </html>

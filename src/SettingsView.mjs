@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { on, setSelectValue } from './browser.mjs';
 
@@ -8,26 +6,24 @@ export default class SettingsView extends View {
     super(`
       <div class="SettingsView">
         <div class="Center">アプリ設定</div>
-        <div class="FieldList">
-          <div class="FieldItem">
-            <span class="Center">駒音</span>
-            <select class="PieceSoundSelect"></select>
-          </div>
-          <div class="FieldItem">
-            <span class="Center">読み上げ</span>
-            <select class="SpeechSelect">
-              <option value="0">なし</option>
-              <option value="1">あり</option>
-            </select>
-          </div>
-          <div class="FieldItem">
-            <span class="Center">駒配色</span>
-            <select class="PieceStyleSelect"></select>
-          </div>
-          <div class="FieldItem">
-            <span class="Center">駒文字</span>
-            <select class="PieceTitleSetSelect"></select>
-          </div>
+        <div class="FieldItem">
+          <span class="Center">駒音</span>
+          <select class="PieceSoundSelect"></select>
+        </div>
+        <div class="FieldItem">
+          <span class="Center">読み上げ</span>
+          <select class="SpeechSelect">
+            <option value="0">なし</option>
+            <option value="1">あり</option>
+          </select>
+        </div>
+        <div class="FieldItem">
+          <span class="Center">駒配色</span>
+          <select class="PieceStyleSelect"></select>
+        </div>
+        <div class="FieldItem">
+          <span class="Center">駒文字</span>
+          <select class="PieceTitleSetSelect"></select>
         </div>
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>

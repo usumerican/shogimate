@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ConfirmView from './ConfirmView.mjs';
 import ExportView from './ExportView.mjs';
 import SettingsView from './SettingsView.mjs';
@@ -210,6 +208,7 @@ export default class ShogiPanel {
     if (!this.step) {
       return;
     }
+    context.lineCap = context.lineJoin = 'round';
 
     this.pieceStyle = this.app.getPieceStyle();
     this.pieceTitleSet = this.app.getPieceTitleSet();
@@ -217,9 +216,17 @@ export default class ShogiPanel {
     const nextFilterColor = this.pieceStyle.filterColors[nextSide];
     context.fillStyle = nextFilterColor;
     context.fillRect(...this.sidePoints[nextSide], this.squareW, this.squareH);
+    const lastSide = nextSide ^ 1;
 
-    if (this.step.move) {
-      const lastSide = nextSide ^ 1;
+    if (this.nextMove) {
+      context.fillStyle = nextFilterColor;
+      const nextMoveFrom = getMoveFrom(this.nextMove);
+      if (isMoveDropped(this.nextMove)) {
+        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
+      } else {
+        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
+      }
+    } else if (this.step.move) {
       context.fillStyle = this.pieceStyle.filterColors[lastSide];
       context.fillRect(...this.getSquarePoint(getMoveTo(this.step.move)), this.squareW, this.squareH);
       const from = getMoveFrom(this.step.move);
@@ -237,16 +244,6 @@ export default class ShogiPanel {
       }
     }
 
-    if (this.nextMove) {
-      context.fillStyle = nextFilterColor;
-      const nextMoveFrom = getMoveFrom(this.nextMove);
-      if (isMoveDropped(this.nextMove)) {
-        context.fillRect(...this.getHandPoint(nextSide, nextMoveFrom), this.squareW, this.squareH);
-      } else {
-        context.fillRect(...this.getSquarePoint(nextMoveFrom), this.squareW, this.squareH);
-      }
-    }
-
     context.beginPath();
     for (let col = 1; col < colN; col++) {
       const x = this.boardX + this.squareW * col;
@@ -261,6 +258,12 @@ export default class ShogiPanel {
     context.stroke();
 
     context.fillStyle = '#000';
+    for (const sq of [30, 33, 57, 60]) {
+      context.beginPath();
+      context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
+      context.fill();
+    }
+
     context.font = this.addrFont;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -286,13 +289,6 @@ export default class ShogiPanel {
       context.strokeRect(sx, sy, this.squareW, this.squareH);
       this.renderText(context, sideInfos[side].char, sx + this.squareW / 2, sy + this.squareH / 2, side);
     }
-
-    for (const sq of [30, 33, 57, 60]) {
-      context.beginPath();
-      context.arc(...this.getSquarePoint(sq), this.squareW * 0.05, 0, Math.PI * 2);
-      context.fill();
-    }
-
     context.font = this.playerFont;
     for (const side of sides) {
       const playerTitle = (this.game.getSideName(side) + ' ' + this.game.players[side].name).trim();
@@ -310,13 +306,24 @@ export default class ShogiPanel {
       }
     }
 
+    if (this.step.count) {
+      context.fillStyle = lastSide ? '#000' : '#fff';
+      this.renderText(
+        context,
+        this.step.count,
+        this.sidePoints[lastSide][0] + this.squareW / 2,
+        this.sidePoints[lastSide][1] + this.squareH / 2,
+        this.game.flipped,
+        lastSide ? '#fff' : '#000'
+      );
+    }
+
     for (let sq = 0; sq < squareN; sq++) {
       const piece = this.step.position.getPiece(sq);
       if (piece) {
         this.renderPiece(context, getPieceSide(piece), getPieceKind(piece), this.getSquarePoint(sq));
       }
     }
-
     for (const side of sides) {
       for (const base of handBases) {
         const handCount = this.step.position.getHandCount(side, base);
@@ -418,12 +425,17 @@ export default class ShogiPanel {
     }
   }
 
-  renderText(context, text, x, y, flipped) {
+  renderText(context, text, x, y, flipped, strokeStyle) {
     if (text) {
       context.save();
       try {
         const cos = flipped ? -1 : 1;
         context.transform(cos, 0, 0, cos, x, y);
+        if (strokeStyle) {
+          context.lineWidth = 8;
+          context.strokeStyle = strokeStyle;
+          context.strokeText(text, 0, 0);
+        }
         context.fillText(text, 0, 0);
       } finally {
         context.restore();

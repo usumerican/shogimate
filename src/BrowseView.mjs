@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import MatchSettingsView from './MatchSettingsView.mjs';
 import MenuView from './MenuView.mjs';
 import ResearchView from './ResearchView.mjs';
@@ -65,7 +63,7 @@ export default class BrowseView extends View {
                 positionSpecified: true,
                 positionSfen: formatSfen(currStep.position),
               },
-              true
+              true,
             );
           },
         },

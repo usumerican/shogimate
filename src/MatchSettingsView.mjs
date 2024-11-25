@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ConfirmView from './ConfirmView.mjs';
 import ImportView from './ImportView.mjs';
 import MatchView from './MatchView.mjs';
@@ -51,20 +49,20 @@ export default class MatchSettingsView extends View {
     this.timingNameSelect = this.el.querySelector('.TimingNameSelect');
     this.timingNameSelect.replaceChildren(
       new Option('時間無制限', ''),
-      ...timingInfos.map((info) => new Option(info.title, info.name))
+      ...timingInfos.map((info) => new Option(info.title, info.name)),
     );
     this.mainTimeSelect = this.el.querySelector('.MainTimeSelect');
     this.mainTimeSelect.replaceChildren(
       ...[0, 10, 20, 30, 40, 50].map((sec) => new Option(sec + '秒', sec * 1000)),
       ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
-        (min) => new Option(min + '分', min * 60_000)
-      )
+        (min) => new Option(min + '分', min * 60_000),
+      ),
     );
     this.extraTimeSelect = this.el.querySelector('.ExtraTimeSelect');
     this.extraTimeSelect.replaceChildren(
       ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
-        (sec) => new Option('+' + sec + '秒', sec * 1000)
-      )
+        (sec) => new Option('+' + sec + '秒', sec * 1000),
+      ),
     );
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
@@ -167,7 +165,7 @@ export default class MatchSettingsView extends View {
   update() {
     const positionSpecified = this.positionSpecifiedCheckbox.checked;
     this.game = parseGameUsi(
-      (positionSpecified && this.positionSfenInput.value) || startNameSfenMap.get(this.startSelect.value)
+      (positionSpecified && this.positionSfenInput.value) || startNameSfenMap.get(this.startSelect.value),
     );
     this.positionSfenInput.disabled = !positionSpecified;
     this.game.startName = this.startSelect.value;

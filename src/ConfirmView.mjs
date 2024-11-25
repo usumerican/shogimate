@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { on } from './browser.mjs';
 
@@ -25,7 +23,7 @@ export default class ConfirmView extends View {
         button.textContent = t;
         on(button, 'click', () => this.hide(i));
         return button;
-      })
+      }),
     );
   }
 }

@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import BrowseView from './BrowseView.mjs';
 import CapturingView from './CapturingView.mjs';
 import ImportView from './ImportView.mjs';

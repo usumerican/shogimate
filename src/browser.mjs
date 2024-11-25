@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 export function parseHtml(html) {
   const template = document.createElement('template');
   template.innerHTML = html

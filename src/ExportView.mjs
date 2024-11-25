@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { downloadFile, on, setSelectValue, setTextareaValue } from './browser.mjs';
 import { formatBod, formatGameCsa, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';

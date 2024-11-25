@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ConfirmView from './ConfirmView.mjs';
 import View from './View.mjs';
 import { on, setTextareaValue } from './browser.mjs';
@@ -69,7 +67,7 @@ export default class CollectionImportView extends View {
         await new ConfirmView().show(
           this,
           `${records.length - skipCount}件読み込みました。` + (skipCount ? `(登録済: ${skipCount}件)` : ''),
-          ['OK']
+          ['OK'],
         );
         this.hide(true);
       }
