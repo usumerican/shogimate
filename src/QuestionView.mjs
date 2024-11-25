@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import BrowseView from './BrowseView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
@@ -215,6 +213,9 @@ export default class QuestionView extends View {
 
   doReset() {
     if (this.canReset()) {
+      if (this.limit < 0) {
+        this.limit = -this.limit;
+      }
       this.appendEnd('中断');
       this.changeStep(this.startStep);
       this.think();
@@ -236,6 +237,12 @@ export default class QuestionView extends View {
   }
 
   onPointerBefore() {
+    if (this.step.endName === '不詰') {
+      if (this.limit > 0) {
+        this.limit = -this.limit;
+      }
+      this.changeStep(this.step.parent);
+    }
     return !this.thinking && this.step.position.sideToMove === this.startSide && !this.isExceeded();
   }
 
@@ -251,10 +258,6 @@ export default class QuestionView extends View {
     try {
       this.shogiPanel.startClock(this.step.position.sideToMove);
       const manual = this.step.position.sideToMove === this.startSide;
-      if (manual && this.isExceeded()) {
-        await this.endGame('不詰');
-        return;
-      }
       this.step.gameUsi = formatGameUsiFromLastStep(this.step);
       this.step.fromToMap = await this.app.engine.getFromToMap(this.step.gameUsi, manual && !this.rate);
       if (!this.step.fromToMap.size) {
@@ -262,6 +265,9 @@ export default class QuestionView extends View {
         return;
       }
       if (manual) {
+        if (this.isExceeded()) {
+          await this.endGame('不詰');
+        }
         return;
       }
       const time = 500;
@@ -304,7 +310,7 @@ export default class QuestionView extends View {
     return (
       !this.rate &&
       this.startRecordOrder >= 0 &&
-      this.limit &&
+      this.limit > 0 &&
       this.step.position.number - this.startStep.position.number > this.limit
     );
   }

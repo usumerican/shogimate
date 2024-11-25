@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ConfirmView from './ConfirmView.mjs';
 import CollectionExportView from './CollectionExportView.mjs';
 import CollectionImportView from './CollectionImportView.mjs';

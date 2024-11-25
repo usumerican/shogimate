@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { on } from './browser.mjs';
 
@@ -33,7 +31,7 @@ export default class MenuView extends View {
           item.callback();
         });
         return button;
-      })
+      }),
     );
   }
 }

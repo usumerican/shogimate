@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import BrowseView from './BrowseView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';

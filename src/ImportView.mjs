@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { on, setTextareaValue } from './browser.mjs';
 import { parseGameCsa, parseGameKif, parseGameUsi } from './shogi.mjs';

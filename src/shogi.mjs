@@ -836,7 +836,7 @@ export const usiEndNameMap = endInfos.reduce((map, info) => (info.usi && map.set
 export const csaEndNameMap = endInfos.reduce((map, info) => (info.csa && map.set(info.csa, info.name), map), new Map());
 
 export class Step {
-  constructor({ parent, children, move, position, capturedPiece, endName, lapTime } = {}) {
+  constructor({ parent, children, move, position, capturedPiece, endName, lapTime, count } = {}) {
     this.parent = parent;
     this.children = children?.slice() || [];
     this.move = move || 0;
@@ -844,6 +844,7 @@ export class Step {
     this.capturedPiece = capturedPiece || 0;
     this.endName = endName || '';
     this.lapTime = lapTime || 0;
+    this.count = count || (parent ? parent.count + (move ? 1 : 0) : 0);
   }
 
   toObject() {

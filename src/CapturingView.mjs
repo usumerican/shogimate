@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ProgressView from './ProgressView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';

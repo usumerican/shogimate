@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import View from './View.mjs';
 import { downloadFile, on, setTextareaValue } from './browser.mjs';
 

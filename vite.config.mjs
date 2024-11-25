@@ -1,3 +1,5 @@
+/* globals process */
+
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -9,6 +11,13 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+      },
     },
   },
 });

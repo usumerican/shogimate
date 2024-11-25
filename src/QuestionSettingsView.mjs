@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import CollectionView from './CollectionView.mjs';
 import QuestionView from './QuestionView.mjs';
 import View from './View.mjs';
@@ -16,7 +14,6 @@ export default class QuestionSettingsView extends View {
         <button class="StartButton">始めから</button>
         <button class="ChallengeButton">チャレンジ</button>
         <button class="CollectionButton">コレクション</button>
-        <div></div>
         <button class="CloseButton">閉じる</button>
       </div>
     `);

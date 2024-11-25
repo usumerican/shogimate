@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import ConfirmView from './ConfirmView.mjs';
 import HomeView from './HomeView.mjs';
 import { KING, kindInfos, makePiece, getMovePhonemes } from './shogi.mjs';
@@ -52,7 +50,7 @@ export default class App {
         bodyColors: ['#fe9', '#fe9'],
         textColors: ['#000', '#000'],
         promotedColors: ['#f00', '#f00'],
-        filterColors: ['#6666', '#6666'],
+        filterColors: ['#6666', '#9996'],
       },
       {
         name: 'black-white',
@@ -60,7 +58,7 @@ export default class App {
         bodyColors: ['#000', '#fff'],
         textColors: ['#fff', '#000'],
         promotedColors: ['#0ff', '#f00'],
-        filterColors: ['#6666', '#6666'],
+        filterColors: ['#6666', '#9996'],
       },
       {
         name: 'blue-red',
