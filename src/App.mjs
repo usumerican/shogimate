@@ -2,6 +2,25 @@ import ConfirmView from './ConfirmView.mjs';
 import HomeView from './HomeView.mjs';
 import { KING, kindInfos, makePiece, getMovePhonemes } from './shogi.mjs';
 
+function isObject(v) {
+  return v && typeof v === 'object';
+}
+
+function mergeDeep(target, source) {
+  for (const k of Object.keys(source)) {
+    const sourceValue = source[k];
+    const targetValue = target[k];
+    if (Array.isArray(sourceValue) && Array.isArray(targetValue)) {
+      target[k] = targetValue.concat(...sourceValue);
+    } else if (isObject(sourceValue) && isObject(targetValue)) {
+      target[k] = mergeDeep(targetValue, sourceValue);
+    } else {
+      target[k] = sourceValue;
+    }
+  }
+  return target;
+}
+
 export default class App {
   static NAME = 'shogimate';
 
@@ -21,6 +40,25 @@ export default class App {
     this.state = this.loadItem('state') || {};
     this.settings = this.loadItem('settings') || {};
     this.collection = new Set(this.loadItem('collection') || []);
+    if (this.id !== App.NAME && !this.settings.merged) {
+      const stateText = localStorage.getItem(App.NAME + '/state');
+      if (stateText) {
+        this.state = mergeDeep(JSON.parse(stateText), this.state);
+        this.saveState();
+      }
+      const collectionText = localStorage.getItem(App.NAME + '/collection');
+      if (collectionText) {
+        this.collection = [...this.collection].reduce((coll, v) => coll.add(v), new Set(JSON.parse(collectionText)));
+        this.saveCollection();
+      }
+      const settingsText = localStorage.getItem(App.NAME + '/settings');
+      if (settingsText) {
+        this.settings = mergeDeep(JSON.parse(settingsText), this.settings);
+      }
+      this.settings.merged = true;
+      this.saveSettings();
+      console.log('merged');
+    }
     this.pieceSounds = [
       {
         name: '',

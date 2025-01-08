@@ -4,6 +4,14 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: './',
+  build: {
+    rollupOptions: {
+      input: {
+        index: 'index.html',
+        shogimate: 'shogimate.html',
+      },
+    },
+  },
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },

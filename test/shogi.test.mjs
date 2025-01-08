@@ -13,7 +13,6 @@ import {
   parseSfen,
   formatSfen,
   Position,
-  flipPiece,
   formatMoveText,
   makeDrop,
   makeSquare,
@@ -28,6 +27,10 @@ import {
   PRO_PAWN,
   HORSE,
   DRAGON,
+  demotePiece,
+  makePiece,
+  GOLD,
+  ROOK,
 } from '../src/shogi.mjs';
 
 describe('shogi', () => {
@@ -83,7 +86,7 @@ describe('shogi', () => {
 
   test('parsePvInfoUsi', () => {
     const pvInfo = parsePvInfoUsi(
-      'info depth 8 seldepth 4 score mate 3 nodes 1322 nps 47214 time 28 pv B*3g 5i5h S*4i'
+      'info depth 8 seldepth 4 score mate 3 nodes 1322 nps 47214 time 28 pv B*3g 5i5h S*4i',
     );
     expect(pvInfo.depth).toEqual(['8']);
     expect(pvInfo.score).toEqual(['mate', '3']);
@@ -136,9 +139,9 @@ describe('shogi', () => {
     expect(formatGameUsiFromLastStep(step)).toEqual('position startpos moves 7g7f 3c3d');
   });
 
-  test('flipPiece', () => {
-    expect(flipPiece(14)).toEqual(30);
-    expect(flipPiece(30)).toEqual(14);
+  test('demotePiece', () => {
+    expect(demotePiece(makePiece(GOLD, 1))).toEqual(makePiece(GOLD, 1));
+    expect(demotePiece(makePiece(DRAGON, 1))).toEqual(makePiece(ROOK, 1));
   });
 
   describe('formatMoveText', () => {
@@ -344,7 +347,7 @@ describe('shogi', () => {
 
   describe('formatGame', () => {
     const game = parseGameUsi(
-      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1 moves 3c3d 7g7f 2b8h 4i5h B*7g 8i7g'
+      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1 moves 3c3d 7g7f 2b8h 4i5h B*7g 8i7g',
     );
 
     beforeAll(() => {
@@ -411,10 +414,10 @@ PI11KY
   test('parseGameKif', () => {
     expect(formatGameUsi(parseGameKif(''))).toEqual('position startpos');
     expect(formatGameUsi(parseGameKif('手合割：香落ち'))).toEqual(
-      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1'
+      'position sfen lnsgkgsn1/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL w - 1',
     );
     expect(formatGameUsi(parseGameKif('1 ３四歩(33) (0:00)\n2 ７六歩(77) (0:00)'))).toEqual(
-      'position startpos moves 3c3d 7g7f'
+      'position startpos moves 3c3d 7g7f',
     );
     const kif = `手合割：香落ち
 下手：Black

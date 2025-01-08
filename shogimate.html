@@ -12,7 +12,7 @@
     <meta property="og:description" content="%VITE_APP_DESCRIPTION%" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@usumerican" />
-    <title>%VITE_APP_TITLE%</title>
+    <title>shogimate</title>
     <link rel="canonical" href="%VITE_APP_URL%" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="icon.png" />
@@ -36,7 +36,7 @@
         display: grid;
         place-items: center;
       }
-      #app {
+      #shogimate {
         width: 100%;
         max-width: 100vh;
         height: 100%;
@@ -46,10 +46,10 @@
     <script src="lib/nosimd/yaneuraou.js" defer></script>
     <script type="module" src="src/shogimate.mjs"></script>
     <script>
-      addEventListener('DOMContentLoaded', () => shogimate('app'));
+      addEventListener('DOMContentLoaded', () => shogimate('shogimate'));
     </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="shogimate"></div>
   </body>
 </html>

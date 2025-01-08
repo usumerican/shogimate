@@ -472,4 +472,20 @@
       background: #ffd;
     }
   }
+
+  .PositionView {
+    background: $themeColor;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: $gap;
+    display: grid;
+    gap: $gap;
+    grid-template-rows: $rowH 1fr $toolH $toolH;
+    place-items: stretch;
+
+    .ShogiPanel {
+      background: #ffd;
+    }
+  }
 }

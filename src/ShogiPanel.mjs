@@ -5,6 +5,7 @@ import { on } from './browser.mjs';
 import {
   colInfos,
   colN,
+  demotePiece,
   formatTimeMS,
   getCol,
   getMoveFrom,
@@ -16,12 +17,15 @@ import {
   handBaseN,
   handBases,
   handOrderMap,
+  isKindPromotable,
   isKindPromoted,
   isMoveDropped,
+  KING,
   makeDrop,
   makeMove,
   makePiece,
   makeSquare,
+  promotePiece,
   rowInfos,
   rowN,
   sideInfos,
@@ -29,14 +33,20 @@ import {
   squareN,
 } from './shogi.mjs';
 
+function rectContains(rx, ry, rw, rh, px, py) {
+  return px >= rx && px < rx + rw && py >= ry && py < ry + rh;
+}
+
 export default class ShogiPanel {
-  constructor(el, handler) {
+  constructor(el, handler, editing) {
     this.el = el;
     this.handler = handler;
+    this.editing = editing;
+    this.editingPiece = 0;
     this.squareW = 100;
     this.squareH = 105;
     this.stageW = this.squareW * 10;
-    this.stageH = this.squareH * 13;
+    this.stageH = this.squareH * (this.editing ? 16 : 13);
     this.boardW = this.squareW * 9;
     this.boardH = this.squareH * 9;
     this.boardX = this.squareW * -4.5;
@@ -56,6 +66,14 @@ export default class ShogiPanel {
     this.playerPoints = [
       [this.squareW * 4.5, this.squareH * 6.25],
       [this.squareW * -4.5, this.squareH * -6.25],
+    ];
+    this.stockRects = [
+      [this.squareW * -4.5, this.squareH * 6.5, this.squareW * 8, this.squareH],
+      [this.squareW * -3.5, this.squareH * -7.5, this.squareW * 8, this.squareH],
+    ];
+    this.bulkPoints = [
+      [this.squareW * 3.5, this.squareH * 6.5],
+      [this.squareW * -4.5, this.squareH * -7.5],
     ];
     const tana = Math.tan((81 / 180) * Math.PI);
     const tanc = Math.tan((72 / 180) * Math.PI);
@@ -107,22 +125,90 @@ export default class ShogiPanel {
     const i = this.game.flipped ? -1 : 1;
     const x = (i * ((pointer.clientX - canvasRect.left) * devicePixelRatio - this.matrix[4])) / this.matrix[0];
     const y = (i * ((pointer.clientY - canvasRect.top) * devicePixelRatio - this.matrix[5])) / this.matrix[3];
-    if (this.rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
-      this.doSquare(
-        makeSquare(Math.floor((x - this.boardX) / this.squareW), Math.floor((y - this.boardY) / this.squareH))
-      );
-    } else {
+    if (rectContains(this.boardX, this.boardY, this.boardW, this.boardH, x, y)) {
+      const sq = makeSquare(Math.floor((x - this.boardX) / this.squareW), Math.floor((y - this.boardY) / this.squareH));
+      if (this.editing) {
+        const piece = this.step.position.getPiece(sq);
+        if (piece) {
+          const kind = getPieceKind(piece);
+          if (isKindPromotable(kind) && !isKindPromoted(kind)) {
+            this.step.position.setPiece(sq, promotePiece(piece));
+          } else {
+            this.step.position.setPiece(sq, 0);
+            this.stockCounts[getPieceBase(piece)]++;
+            this.editingPiece = isKindPromoted(kind) ? demotePiece(piece) : piece;
+          }
+        } else {
+          const base = getPieceBase(this.editingPiece);
+          if (this.stockCounts[base]) {
+            this.step.position.setPiece(sq, this.editingPiece);
+            this.stockCounts[base]--;
+          }
+        }
+        this.request();
+      } else {
+        this.doSquare(sq);
+      }
+      return;
+    }
+    for (const side of sides) {
+      const [hx, hy, hw, hh] = this.handRects[side];
+      if (rectContains(hx, hy, hw, hh, x, y)) {
+        const base = handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)];
+        if (this.editing) {
+          if (this.stockCounts[base]) {
+            this.step.position.addHandCount(side, base, 1);
+            this.stockCounts[base]--;
+          } else {
+            const count = this.step.position.getHandCount(side, base);
+            if (count) {
+              this.step.position.addHandCount(side, base, -count);
+              this.stockCounts[base] += count;
+            }
+          }
+          this.editingPiece = makePiece(base, side);
+          this.request();
+        } else {
+          this.doHand(side, base);
+        }
+        return;
+      }
+    }
+    if (this.editing) {
       for (const side of sides) {
-        const [hx, hy, hw, hh] = this.handRects[side];
-        if (this.rectContains(hx, hy, hw, hh, x, y)) {
-          this.doHand(side, handBases[Math.floor((side ? hx + hw - x : x - hx) / this.squareW)]);
+        const [sx, sy, sw, sh] = this.stockRects[side];
+        if (rectContains(sx, sy, sw, sh, x, y)) {
+          const order = Math.floor((side ? sx + sw - x : x - sx) / this.squareW);
+          const base = order ? handBases[order - 1] : KING;
+          this.editingPiece = makePiece(base, side);
+          this.request();
+          return;
+        }
+        if (rectContains(...this.sidePoints[side], this.squareW, this.squareH, x, y)) {
+          this.step.position.sideToMove = side;
+          this.request();
+          return;
+        }
+        if (rectContains(...this.bulkPoints[side], this.squareW, this.squareH, x, y)) {
+          if (this.stockCounts.some((count, base) => base && count)) {
+            for (const base of handBases) {
+              this.step.position.addHandCount(side, base, this.stockCounts[base]);
+              this.stockCounts[base] = 0;
+            }
+          } else {
+            for (const base of handBases) {
+              const count = this.step.position.getHandCount(side, base);
+              if (count) {
+                this.stockCounts[base] += count;
+                this.step.position.addHandCount(side, base, -count);
+              }
+            }
+          }
+          this.request();
+          return;
         }
       }
     }
-  }
-
-  rectContains(rx, ry, rw, rh, px, py) {
-    return px >= rx && px < rx + rw && py >= ry && py < ry + rh;
   }
 
   async doSquare(sq) {
@@ -239,7 +325,7 @@ export default class ShogiPanel {
         context.fillRect(
           ...this.getHandPoint(lastSide, getPieceBase(this.step.capturedPiece)),
           this.squareW,
-          this.squareH
+          this.squareH,
         );
       }
     }
@@ -314,7 +400,7 @@ export default class ShogiPanel {
         this.sidePoints[lastSide][0] + this.squareW / 2,
         this.sidePoints[lastSide][1] + this.squareH / 2,
         this.game.flipped,
-        lastSide ? '#fff' : '#000'
+        lastSide ? '#fff' : '#000',
       );
     }
 
@@ -329,6 +415,28 @@ export default class ShogiPanel {
         const handCount = this.step.position.getHandCount(side, base);
         if (handCount) {
           this.renderPiece(context, side, base, this.getHandPoint(side, base), handCount);
+        }
+      }
+    }
+
+    if (this.editing) {
+      if (this.editingPiece) {
+        const side = getPieceSide(this.editingPiece);
+        context.fillStyle = this.pieceStyle.filterColors[side];
+        context.fillRect(...this.getStockPoint(side, getPieceBase(this.editingPiece)), this.squareW, this.squareH);
+      }
+      context.font = this.sideFont;
+      context.fillStyle = '#000';
+      for (const side of sides) {
+        const [bx, by] = this.bulkPoints[side];
+        context.strokeRect(bx, by, this.squareW, this.squareH);
+        this.renderText(context, '↕︎', bx + this.squareW / 2, by + this.squareH / 2, side);
+        context.strokeRect(...this.stockRects[side]);
+        for (let base = 0; base < this.stockCounts.length; base++) {
+          const count = this.stockCounts[base];
+          if (count) {
+            this.renderPiece(context, side, base || KING, this.getStockPoint(side, base), count);
+          }
         }
       }
     }
@@ -361,6 +469,12 @@ export default class ShogiPanel {
     const rect = this.handRects[side];
     const order = handOrderMap.get(base);
     return [rect[0] + this.squareW * (side ? handBaseN - 1 - order : order), rect[1]];
+  }
+
+  getStockPoint(side, base) {
+    const rect = this.stockRects[side];
+    const order = base ? handOrderMap.get(base) : -1;
+    return [rect[0] + this.squareW * (side ? handBaseN - 1 - order : 1 + order), rect[1]];
   }
 
   renderPiece(context, side, kind, [x, y], count) {

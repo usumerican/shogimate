@@ -2,11 +2,14 @@ import BrowseView from './BrowseView.mjs';
 import CapturingView from './CapturingView.mjs';
 import ImportView from './ImportView.mjs';
 import MatchSettingsView from './MatchSettingsView.mjs';
+import PositionView from './PositionView.mjs';
 import QuestionSettingsView from './QuestionSettingsView.mjs';
+import ResearchView from './ResearchView.mjs';
 import ResumeView from './ResumeView.mjs';
 import SettingsView from './SettingsView.mjs';
 import View from './View.mjs';
 import { on, openUrl } from './browser.mjs';
+import { formatSfen, Game, parseSfen, Position, Step } from './shogi.mjs';
 
 export default class HomeView extends View {
   constructor() {
@@ -17,7 +20,10 @@ export default class HomeView extends View {
         <button class="QuestionButton">実戦詰将棋</button>
         <button class="MatchButton">AI 対局</button>
         <button class="ResumeButton">封じ手</button>
-        <button class="ImportButton">棋譜の読み込み</button>
+        <div class="ToolBar">
+          <button class="ImportButton">棋譜の読み込み</button>
+          <button class="PositionButton">局面の検討</button>
+        </div>
         <div class="ToolBar">
           <button class="InfoButton">ソース</button>
           <button class="SettingsButton">アプリ設定</button>
@@ -52,6 +58,18 @@ export default class HomeView extends View {
       const game = await new ImportView().show(this, this.app.settings.match);
       if (game) {
         await new BrowseView().show(this, '棋譜', game);
+      }
+    });
+
+    on(this.el.querySelector('.PositionButton'), 'click', async () => {
+      const step = await new PositionView().show(
+        this,
+        new Step({ position: parseSfen(this.app.settings.positionSfen) || new Position() }),
+      );
+      if (step) {
+        this.app.settings.positionSfen = formatSfen(step.position);
+        this.app.saveSettings();
+        await new ResearchView().show(this, new Game({ startStep: step }), step);
       }
     });
 
