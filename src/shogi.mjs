@@ -34,7 +34,7 @@ export const rowInfos = [
 ];
 export const textRowMap = rowInfos.reduce(
   (map, info, row) => map.set(info.name, row).set(info.alias, row).set(info.char, row),
-  new Map()
+  new Map(),
 );
 export const usiRowMap = rowInfos.reduce((map, info, row) => map.set(info.usi, row), new Map());
 
@@ -83,6 +83,10 @@ export function isKindPromoted(kind) {
   return kind > KING;
 }
 
+export function isKindPromotable(kind) {
+  return kind < GOLD;
+}
+
 export const pieceBaseMask = 7;
 export const piecePromotedMask = 8;
 export const pieceKindMask = 15;
@@ -109,12 +113,14 @@ export function promotePiece(piece) {
   return piece | piecePromotedMask;
 }
 
-export function flipPiece(piece) {
-  return piece ^ pieceSideMask;
+export function demotePiece(piece) {
+  return piece & ~piecePromotedMask;
 }
 
-export function isPiecePromotable(piece, fromRow, toRow) {
-  return getPieceKind(piece) < GOLD && (getPieceSide(piece) ? toRow > 5 || fromRow > 5 : toRow < 3 || fromRow < 3);
+export function canPiecePromote(piece, fromRow, toRow) {
+  return (
+    isKindPromotable(getPieceKind(piece)) && (getPieceSide(piece) ? toRow > 5 || fromRow > 5 : toRow < 3 || fromRow < 3)
+  );
 }
 
 export const baseCounts = [2, 18, 4, 4, 4, 2, 2, 4];
@@ -323,7 +329,7 @@ export const textKindMap = kindInfos.reduce(
     ['成角', 13],
     ['成飛', 14],
     ['竜', 14],
-  ])
+  ]),
 );
 export const csaKindMap = kindInfos.reduce((map, info, kind) => (info.csa && map.set(info.csa, kind), map), new Map());
 
@@ -592,7 +598,7 @@ export function getMoveModifiers(pos, move) {
   }
   if (isMovePromoted(move)) {
     modifiers.push('成');
-  } else if (isPiecePromotable(piece, fromRow, toRow)) {
+  } else if (canPiecePromote(piece, fromRow, toRow)) {
     modifiers.push('不成');
   }
   return modifiers;
@@ -653,7 +659,7 @@ const colPattern = [...textColMap.keys()].join('|');
 const rowPattern = [...textRowMap.keys()].join('|');
 const kindPattern = [...textKindMap.keys()].join('|');
 const moveTextRegExp = new RegExp(
-  String.raw`(${colPattern})?(${rowPattern})?(?:(同)\s*)?(${kindPattern})(?:(打)|(左|直|右)?(上|寄|引)?(不成|成)?)`
+  String.raw`(${colPattern})?(${rowPattern})?(?:(同)\s*)?(${kindPattern})(?:(打)|(左|直|右)?(上|寄|引)?(不成|成)?)`,
 );
 const textPhonemeMap = new Map([
   ...[...textColMap].map(([text, col]) => [text, colInfos[col].phoneme]),
@@ -735,7 +741,7 @@ export function formatSfen(pos) {
 }
 
 export function parseSfen(sfen) {
-  const found = sfen.trim().match(/^([+a-zA-Z\d/]+)\s+([bw])\s+(?:-|([a-zA-Z\d]+))\s+(\d+)$/);
+  const found = sfen?.trim().match(/^([+a-zA-Z\d/]+)\s+([bw])\s+(?:-|([a-zA-Z\d]+))\s+(\d+)$/);
   if (!found) {
     return null;
   }
@@ -1222,7 +1228,7 @@ export function formatGameKif(game) {
   const stack = [[game.startStep, 0, 0, [0, 0]]];
   while (stack.length) {
     const [step, depth, siblingOrder, parentTotalTimes] = stack.pop();
-    const totalTimes = parentTotalTimes.slice(0);
+    const totalTimes = parentTotalTimes.slice();
     if (step.parent) {
       if (siblingOrder) {
         gameKif += '\n変化：' + depth + '手\n';
@@ -1273,7 +1279,7 @@ const endKifPattern = endInfos.reduce((arr, info) => (info.kif && arr.push(info.
 const addrKifPattern = '[1-9１２３４５６７８９一二三四五六七八九]';
 const kindKifPattern = [...textKindMap.keys()].join('|');
 const moveKifRegExp = new RegExp(
-  String.raw`^\s*(?:\d+\.?\s+)?(?:[☗☖▲△▽])?(?:(${endKifPattern})|(?:(同\s*)|(${addrKifPattern})(${addrKifPattern})(?:同\s*)?)(${kindKifPattern})(?:(打)|([左右直])?([上下寄])?(不?成)?(?:\((${addrKifPattern})(${addrKifPattern})\))?))(?:\s*\(\s*(\d+):(\d+)(?:\s*/\s*\d+:\d+:\d+)?\s*\))?\+?`
+  String.raw`^\s*(?:\d+\.?\s+)?(?:[☗☖▲△▽])?(?:(${endKifPattern})|(?:(同\s*)|(${addrKifPattern})(${addrKifPattern})(?:同\s*)?)(${kindKifPattern})(?:(打)|([左右直])?([上下寄])?(不?成)?(?:\((${addrKifPattern})(${addrKifPattern})\))?))(?:\s*\(\s*(\d+):(\d+)(?:\s*/\s*\d+:\d+:\d+)?\s*\))?\+?`,
 );
 
 export function parseGameKif(gameKif) {
@@ -1475,7 +1481,7 @@ export function parseGameCsa(gameCsa) {
             } else {
               game.startStep.position.setPiece(
                 makeSquare(textColMap.get(colS), textRowMap.get(rowS)),
-                makePiece(kind, side)
+                makePiece(kind, side),
               );
             }
           }

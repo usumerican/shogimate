@@ -1,6 +1,6 @@
 import ConfirmView from './ConfirmView.mjs';
-import ImportView from './ImportView.mjs';
 import MatchView from './MatchView.mjs';
+import PositionView from './PositionView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';
 import { on, setSelectValue } from './browser.mjs';
@@ -12,10 +12,10 @@ export default class MatchSettingsView extends View {
       <div class="MatchSettingsView">
         <div class="Center">対局設定</div>
         <canvas class="ShogiPanel"></canvas>
-        <div class="TitleBar">
+        <div class="ToolBar">
           <label class="LabelCenter"><input type="checkbox" class="PositionSpecifiedCheckbox" />指定局面</label>
           <input class="PositionSfenInput" placeholder="指定局面SFEN" />
-          <button class="ImportButton">読み込み</button>
+          <button class="PositionButton">局面編集</button>
         </div>
         <div class="ToolBar">
           <select class="StartSelect"></select>
@@ -77,11 +77,11 @@ export default class MatchSettingsView extends View {
       this.update();
     });
 
-    on(this.el.querySelector('.ImportButton'), 'click', async () => {
-      const game = await new ImportView().show(this);
-      if (game) {
+    on(this.el.querySelector('.PositionButton'), 'click', async () => {
+      const step = await new PositionView().show(this, this.game.startStep);
+      if (step) {
+        this.positionSfenInput.value = formatSfen(step.position);
         this.positionSpecifiedCheckbox.checked = true;
-        this.positionSfenInput.value = formatSfen(game.startStep.position);
         this.update();
       }
     });
@@ -164,10 +164,14 @@ export default class MatchSettingsView extends View {
 
   update() {
     const positionSpecified = this.positionSpecifiedCheckbox.checked;
-    this.game = parseGameUsi(
-      (positionSpecified && this.positionSfenInput.value) || startNameSfenMap.get(this.startSelect.value),
-    );
     this.positionSfenInput.disabled = !positionSpecified;
+    this.game = null;
+    if (positionSpecified) {
+      this.game = parseGameUsi(this.positionSfenInput.value);
+    }
+    if (!this.game) {
+      this.game = parseGameUsi(startNameSfenMap.get(this.startSelect.value));
+    }
     this.game.startName = this.startSelect.value;
     this.game.automation = +this.automationSelect.value;
     this.game.flipped = this.game.automation === 1 ? 1 : 0;
