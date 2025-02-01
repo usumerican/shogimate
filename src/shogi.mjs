@@ -998,9 +998,20 @@ export const BYOYOMI = 'byoyomi';
 export const FISCHER = 'fischer';
 
 export const timingInfos = [
+  { name: '', title: '時間無制限' },
   { name: BYOYOMI, title: '秒読み' },
   { name: FISCHER, title: 'フィッシャー' },
 ];
+export const timingNameTitleMap = timingInfos.reduce((map, info) => map.set(info.name, info.title), new Map());
+
+export function formatMainTime(time) {
+  const sec = Math.floor(time / 1000);
+  return sec >= 60 ? Math.floor(sec / 60) + '分' : sec + '秒';
+}
+
+export function formatExtraTime(time) {
+  return '+' + Math.floor(time / 1000) + '秒';
+}
 
 export class Player {
   constructor({ name, timingName, mainTime, extraTime, restTime } = {}) {
@@ -1134,6 +1145,13 @@ export class Game {
     for (const side of sides) {
       this.players[side].timingName = value;
     }
+  }
+
+  getTimingTitle() {
+    return (
+      timingNameTitleMap.get(this.timingName) +
+      (this.timingName ? ' ' + formatMainTime(this.mainTime) + ' ' + formatExtraTime(this.extraTime) : '')
+    );
   }
 }
 

@@ -1,7 +1,7 @@
 .shogimate {
   $gap: 2px;
-  $toolH: 6vh;
-  $rowH: 4vh;
+  $toolH: 3rem;
+  $rowH: 2rem;
   $themeColor: #fd0;
   $borderColor: #999;
   $shadowColor: #0006;
@@ -162,7 +162,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: repeat(7, minmax(auto, 15vmin));
+    grid-template-rows: repeat(7, $toolH);
     align-content: center;
 
     .AppTitleOutput {
@@ -178,7 +178,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: repeat(8, minmax(auto, 12vmin));
+    grid-template-rows: $rowH repeat(7, $toolH);
     align-content: center;
   }
 
@@ -259,7 +259,7 @@
     padding: $gap;
     display: grid;
     gap: $gap;
-    grid-template-rows: repeat(6, minmax(auto, 12vmin));
+    grid-template-rows: repeat(6, $toolH);
     align-content: center;
 
     .FieldItem {

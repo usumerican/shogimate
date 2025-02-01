@@ -82,31 +82,9 @@ export function openUrl(url) {
   a.click();
 }
 
-export function downloadFile(name, content) {
+export function downloadTextFile(name, content) {
   const anchor = document.createElement('a');
-  anchor.href = 'data:application/octet-stream,' + encodeURIComponent(content);
+  anchor.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
   anchor.download = name;
   anchor.click();
-}
-
-export function shuffle(arr, start, end) {
-  if (start < 0) {
-    start += arr.length;
-  }
-  if (!(start >= 0)) {
-    start = 0;
-  }
-  if (end < 0) {
-    end += arr.length;
-  }
-  if (!(end <= arr.length)) {
-    end = arr.length;
-  }
-  for (let n = end - start, i = end - 1; n >= 2; n--, i--) {
-    let j = (start + Math.random() * n) | 0;
-    let t = arr[i];
-    arr[i] = arr[j];
-    arr[j] = t;
-  }
-  return arr;
 }

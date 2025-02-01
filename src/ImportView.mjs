@@ -8,7 +8,7 @@ export default class ImportView extends View {
       <div class="ImportView">
         <div class="Center">読み込み</div>
         <textarea class="TextInput" placeholder="KIF/KI2/CSA/USI/BOD/SFEN"></textarea>
-        <input class="FileInput" type="file" accept=".kifu,.kif,.ki2u,.ki2,.csa,.usi,.bod,.sfen,.txt" />
+        <input class="FileInput" type="file" accept="text/*, .txt, .kif, .kifu, .ki2, .ki2u, .csa, .usi, .bod, .sfen" />
         <button class="FileButton">ファイル選択</button>
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>

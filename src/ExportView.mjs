@@ -1,5 +1,5 @@
 import View from './View.mjs';
-import { downloadFile, on, setSelectValue, setTextareaValue } from './browser.mjs';
+import { downloadTextFile, on, setSelectValue, setTextareaValue } from './browser.mjs';
 import { formatBod, formatGameCsa, formatGameKi2, formatGameKif, formatGameUsi, formatSfen } from './shogi.mjs';
 
 export default class ExportView extends View {
@@ -57,7 +57,7 @@ export default class ExportView extends View {
     });
 
     on(this.el.querySelector('.DownloadButton'), 'click', () => {
-      downloadFile(this.formatSelect.value, this.textOutput.value);
+      downloadTextFile(this.formatSelect.value, this.textOutput.value);
     });
   }
 

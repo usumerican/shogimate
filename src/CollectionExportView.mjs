@@ -1,5 +1,5 @@
 import View from './View.mjs';
-import { downloadFile, on, setTextareaValue } from './browser.mjs';
+import { downloadTextFile, on, setTextareaValue } from './browser.mjs';
 
 export default class CollectionExportView extends View {
   constructor() {
@@ -25,7 +25,7 @@ export default class CollectionExportView extends View {
     });
 
     on(this.el.querySelector('.DownloadButton'), 'click', () => {
-      downloadFile('collection.txt', this.textOutput.value);
+      downloadTextFile('collection.txt', this.textOutput.value);
     });
   }
 

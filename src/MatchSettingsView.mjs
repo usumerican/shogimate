@@ -1,10 +1,21 @@
+import { randomInt } from 'jshuffle';
 import ConfirmView from './ConfirmView.mjs';
 import MatchView from './MatchView.mjs';
 import PositionView from './PositionView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';
 import { on, setSelectValue } from './browser.mjs';
-import { formatSfen, parseGameUsi, sideInfos, sides, startInfos, startNameSfenMap, timingInfos } from './shogi.mjs';
+import {
+  formatExtraTime,
+  formatMainTime,
+  formatSfen,
+  parseGameUsi,
+  sideInfos,
+  sides,
+  startInfos,
+  startNameSfenMap,
+  timingInfos,
+} from './shogi.mjs';
 
 export default class MatchSettingsView extends View {
   constructor() {
@@ -47,22 +58,21 @@ export default class MatchSettingsView extends View {
     this.positionSpecifiedCheckbox = this.el.querySelector('.PositionSpecifiedCheckbox');
     this.positionSfenInput = this.el.querySelector('.PositionSfenInput');
     this.timingNameSelect = this.el.querySelector('.TimingNameSelect');
-    this.timingNameSelect.replaceChildren(
-      new Option('時間無制限', ''),
-      ...timingInfos.map((info) => new Option(info.title, info.name)),
-    );
+    this.timingNameSelect.replaceChildren(...timingInfos.map((info) => new Option(info.title, info.name)));
     this.mainTimeSelect = this.el.querySelector('.MainTimeSelect');
     this.mainTimeSelect.replaceChildren(
-      ...[0, 10, 20, 30, 40, 50].map((sec) => new Option(sec + '秒', sec * 1000)),
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
-        (min) => new Option(min + '分', min * 60_000),
-      ),
+      ...[
+        0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 120_000, 180_000, 240_000, 300_000, 360_000, 420_000,
+        480_000, 540_000, 600_000, 900_000, 1200_000, 1500_000, 1800_000, 2100_000, 2400_000, 2700_000, 3000_000,
+        3300_000, 3600_000,
+      ].map((time) => new Option(formatMainTime(time), time)),
     );
     this.extraTimeSelect = this.el.querySelector('.ExtraTimeSelect');
     this.extraTimeSelect.replaceChildren(
-      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(
-        (sec) => new Option('+' + sec + '秒', sec * 1000),
-      ),
+      ...[
+        0, 1_000, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000, 8_000, 9_000, 10_000, 15_000, 20_000, 25_000, 30_000,
+        35_000, 40_000, 45_000, 50_000, 55_000, 60_000,
+      ].map((time) => new Option(formatExtraTime(time), time)),
     );
 
     on(this.el.querySelector('.CloseButton'), 'click', () => {
@@ -113,7 +123,7 @@ export default class MatchSettingsView extends View {
     on(this.el.querySelector('.StartButton'), 'click', async () => {
       const automation = +this.automationSelect.value;
       if (automation === 3) {
-        const side = Math.floor(Math.random() * 2);
+        const side = randomInt(2);
         if (
           !(await new ConfirmView().show(this, `あなたは${this.getAutomationOption(side).text}です。`, [
             'キャンセル',
@@ -143,8 +153,8 @@ export default class MatchSettingsView extends View {
         };
         this.app.saveSettings();
       }
-      await new MatchView().show(this, '対局', this.game);
       this.hide();
+      await new MatchView().show(this.parent, this.game);
     });
   }
 

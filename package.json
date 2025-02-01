@@ -1,7 +1,7 @@
 {
   "name": "shogimate",
   "private": true,
-  "version": "1.26.0",
+  "version": "1.27.0",
   "scripts": {
     "dev": "vite",
     "test": "vitest run",
@@ -16,6 +16,7 @@
     "vitest": "^2.1.5"
   },
   "dependencies": {
+    "jshuffle": "^0.2.1",
     "wasm-feature-detect": "^1.5.1"
   }
 }
