@@ -2,7 +2,6 @@ import BrowseView from './BrowseView.mjs';
 import ConfirmView from './ConfirmView.mjs';
 import MenuView from './MenuView.mjs';
 import ProgressView from './ProgressView.mjs';
-import ResumeView from './ResumeView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';
 import { on, setTextareaValue } from './browser.mjs';
@@ -25,7 +24,7 @@ export default class MatchView extends View {
       <div class="MatchView">
         <div class="TitleBar">
           <button class="CloseButton">閉じる</button>
-          <div class="TitleOutput Center">対局</div>
+          <div class="TitleOutput Center"></div>
           <button class="MenuButton">メニュー</button>
         </div>
         <canvas class="ShogiPanel"></canvas>
@@ -96,15 +95,15 @@ export default class MatchView extends View {
     });
   }
 
-  onShow(title, game, lastStep = game.startStep) {
+  onShow(game, lastStep = game.startStep) {
     this.shogiPanel.app = this.app;
-    this.title = this.titleOutput.textContent = title;
     this.game = this.shogiPanel.game = game;
+    this.titleOutput.textContent = this.game.getTimingTitle();
     if (lastStep === this.game.startStep) {
       this.shogiPanel.initClocks();
     } else {
       for (const side of sides) {
-        this.shogiPanel.clockTimes[side] = this.game.players[side].restTime;
+        this.shogiPanel.clockTimes[side] = this.game.players[side].getClockTime();
       }
     }
     this.changeStep(lastStep);
@@ -131,7 +130,7 @@ export default class MatchView extends View {
     if (this.adjournCheckbox.checked) {
       this.app.settings.adjournedGame = this.game.toObject();
       this.app.saveSettings();
-      await new ResumeView().show(this);
+      await new ConfirmView().show(this, '封じました。', ['OK']);
       this.hide();
     } else {
       await this.think();
@@ -207,7 +206,7 @@ export default class MatchView extends View {
     await new ConfirmView().show(
       this,
       `${sideInfos[step.position.sideToMove].char}${this.game.getSideName(step.position.sideToMove)}の${endName}です。`,
-      ['OK']
+      ['OK'],
     );
     await this.doBrowse();
   }
@@ -217,7 +216,7 @@ export default class MatchView extends View {
   }
 
   async doBrowse() {
-    await new BrowseView().show(this, this.title, this.game, this.step, true);
     this.hide();
+    await new BrowseView().show(this.parent, this.titleOutput.textContent, this.game, this.step, true);
   }
 }

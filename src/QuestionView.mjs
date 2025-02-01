@@ -4,7 +4,7 @@ import ProgressView from './ProgressView.mjs';
 import ResearchView from './ResearchView.mjs';
 import ShogiPanel from './ShogiPanel.mjs';
 import View from './View.mjs';
-import { on, onLongPress, shuffle } from './browser.mjs';
+import { on, onLongPress } from './browser.mjs';
 import {
   Step,
   parseMoveUsi,
@@ -16,6 +16,7 @@ import {
   sides,
   formatMoveText,
 } from './shogi.mjs';
+import { shuffle } from 'jshuffle';
 
 export default class QuestionView extends View {
   constructor() {
@@ -120,7 +121,7 @@ export default class QuestionView extends View {
     for (let i = 0; i < this.recordIndices.length; i++) {
       const recordIndex = this.recordIndices[i];
       options.push(
-        new Option(this.formatRecordOption(recordIndex, this.app.collection.has(this.records[recordIndex])), i)
+        new Option(this.formatRecordOption(recordIndex, this.app.collection.has(this.records[recordIndex])), i),
       );
     }
     if (

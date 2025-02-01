@@ -101,10 +101,10 @@ export default class App {
       {
         name: 'blue-red',
         title: '青対赤',
-        bodyColors: ['#ddf', '#fdd'],
+        bodyColors: ['#eef', '#fee'],
         textColors: ['#00c', '#c00'],
         promotedColors: ['#60f', '#f06'],
-        filterColors: ['#ccf6', '#fcc6'],
+        filterColors: ['#66f6', '#f996'],
       },
     ];
     this.defaultPieceStyle = pieceStyles[0];

@@ -9,7 +9,7 @@ export default class CollectionImportView extends View {
       <div class="CollectionImportView">
         <div class="Center">読み込み</div>
         <textarea class="TextInput" placeholder="SFEN moves MOVE1 MOVE2..."></textarea>
-        <input class="FileInput" type="file" accept=".txt" />
+        <input class="FileInput" type="file" accept="text/*, .txt" />
         <button class="FileButton">ファイル選択</button>
         <div class="ToolBar">
           <button class="CloseButton">閉じる</button>

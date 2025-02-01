@@ -9,7 +9,7 @@ export default class View {
     this.parent = parent;
     this.app = this.parent.app || this.parent;
     this.onShow?.(...params);
-    this.parent.el.appendChild(this.el);
+    this.app.el.appendChild(this.el);
     this.focusView(this);
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -18,7 +18,7 @@ export default class View {
 
   hide(value) {
     this.onHide?.();
-    this.parent.el.removeChild(this.el);
+    this.app.el.removeChild(this.el);
     this.focusView(this.parent);
     this.resolve?.(value);
   }

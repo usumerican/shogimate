@@ -67,10 +67,10 @@ export default class QuestionSettingsView extends View {
         mode > 0 ? this.app.getState(['bs', book.name, 'vs', volume.name, 'ro']) || 0 : mode,
         `${book.title} ${volume.title}`,
         book.name,
-        volume.name
+        volume.name,
       )
     ) {
-      this.hide();
+      this.update();
     }
   }
 
