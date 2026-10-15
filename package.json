@@ -1,7 +1,7 @@
 {
   "name": "shogimate",
   "private": true,
-  "version": "1.28.0",
+  "version": "1.29.0",
   "scripts": {
     "dev": "vite",
     "test": "vitest run",
@@ -17,6 +17,9 @@
     "prettier": "^3.5.2",
     "sass-embedded": "^1.85.1",
     "vite": "^6.2.0",
-    "vitest": "^3.0.7"
+    "vitest": "^5.0.4"
+  },
+  "allowScripts": {
+    "esbuild@0.25.0": true
   }
 }
